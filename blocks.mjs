@@ -606,16 +606,3 @@ export const block = {
         },
     },
 };
-
-// const text = [
-//     { type: "heading_1", text: "Meeting plan" },
-//     { type: "paragraph", text: "This is the plan for today's meeting:" },
-//     { type: "video", text: "Discuss world domination" },
-//     { type: "to_do", text: "Go to lunch." }
-// ]
-
-// const blocks = text.map(({type, text}) => block[type].createBlock({
-//     rtArray: buildRichTextObj(text),
-// }))
-
-// console.dir(blocks, { depth: null })

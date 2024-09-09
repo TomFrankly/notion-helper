@@ -9,13 +9,14 @@
  * @param {boolean} opts.code - Code-style text
  * @param {string} opts.color - String specifying the text's color or background color. Opts: "blue", "brown", "default", "gray", "green", "orange", "pink", "purple", "red", "yellow". All except "default" can also be used as a background color with "[color]_background" - example: "blue_background". See: https://developers.notion.com/reference/rich-text#the-annotation-object
  * @param {string} url - The URL for this object, if any. Creates a clickable link.
+ * @param {string} [type=text] - An optional type for the Rich Text Object. Currently only supports text.
  * @returns {Array<Object>} - Array with a single Rich Text Object
  */
 export function buildRichTextObj(text, opts, url, type = "text") {
     return [
         {
             type: type,
-            text: {
+            [type]: {
                 content: text,
                 ...(url &&
                     url.length > 0 && {

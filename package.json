@@ -5,6 +5,17 @@
   "type": "module",
   "main": "index.mjs",
   "devDependencies": {},
-  "author": "Thomas Frank",
-  "license": "ISC"
+  "author": "Thomas Frank <thomas@thomasjfrank.com> (https://thomasjfrank.com)",
+  "license": "MIT",
+  "keywords": [
+    "notion",
+    "notion api",
+    "notionapi",
+    "notion-api"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/TomFrankly/notion-helper"
+  },
+  "homepage": "https://github.com/TomFrankly/notion-helper"
 }

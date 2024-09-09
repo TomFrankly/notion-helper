@@ -1,4 +1,4 @@
-import { isSingleEmoji, isValidURL } from "./utils.mjs"
+import { isSingleEmoji, isValidURL, validateImageURL } from "./utils.mjs"
 
 /**
  * 
@@ -11,9 +11,9 @@ export function setIcon(value) {
     }
     
     const isEmoji = isSingleEmoji(value)
-    const isURL = isValidURL(value)
+    const isImageURL = validateImageURL(value)
 
-    if (isURL) {
+    if (isImageURL) {
         return createExternal(value)
     } else if (isEmoji) {
         return createEmoji(value)
