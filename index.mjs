@@ -6,7 +6,7 @@ import {
 import { setIcon } from "./emoji-and-files.mjs";
 import { page_meta, page_props } from "./page-meta.mjs";
 
-export {
+const NotionHelper = {
     buildRichTextObj,
     makeParagraphBlocks,
     block,
@@ -14,3 +14,5 @@ export {
     page_meta,
     page_props
 }
+
+export default NotionHelper
