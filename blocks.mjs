@@ -6,6 +6,7 @@ import {
     validateImageURL,
     validatePDFURL,
     validateVideoURL,
+    enforceStringLength
 } from "./utils.mjs";
 
 /*
@@ -15,14 +16,27 @@ import {
  * - Remove undefined blocks from children arrays before making calls
  */
 
-export function makeParagraphs(strings) {
+/**
+ * Simple function to create standard Paragraph blocks from an array of strings without any special formatting. Each Paragraph block will contain a single Rich Text Object.
+ * 
+ * @param {Array<string>} strings - an array of strings.
+ * @returns {Array<Object>} - array of Paragraph blocks.
+ */
+export function makeParagraphBlocks(strings) {
     if (!Array.isArray(strings) || strings.length < 1) {
         console.error(`Invalid argument passed to makeParagraphs(). Expected a non-empty array.`)
         console.dir(strings)
         throw new Error(`Invalid argument: Expected a non-empty array.`)
     }
     
-    const lengthCheckedStrings = "" // Fix
+    /* Check each string's length, get a new array of strings */
+    const lengthCheckedStrings = strings.flatMap((string) => enforceStringLength(string))
+
+    /* Turn each string into an array with a single Rich Text Object */
+    const richTextObjects = lengthCheckedStrings.map((string) => buildRichTextObj(string))
+
+    /* Create a Paragraph block for each Rich Text Object */
+    return richTextObjects.map((richText) => block.paragraph.createBlock({rtArray: richText}))
 }
 
 /*
@@ -593,15 +607,15 @@ export const block = {
     },
 };
 
-const text = [
-    { type: "heading_1", text: "Meeting plan" },
-    { type: "paragraph", text: "This is the plan for today's meeting:" },
-    { type: "video", text: "Discuss world domination" },
-    { type: "to_do", text: "Go to lunch." }
-]
+// const text = [
+//     { type: "heading_1", text: "Meeting plan" },
+//     { type: "paragraph", text: "This is the plan for today's meeting:" },
+//     { type: "video", text: "Discuss world domination" },
+//     { type: "to_do", text: "Go to lunch." }
+// ]
 
-const blocks = text.map(({type, text}) => block[type].createBlock({
-    rtArray: buildRichTextObj(text),
-}))
+// const blocks = text.map(({type, text}) => block[type].createBlock({
+//     rtArray: buildRichTextObj(text),
+// }))
 
-console.dir(blocks, { depth: null })
+// console.dir(blocks, { depth: null })
