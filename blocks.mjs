@@ -28,9 +28,12 @@ export function makeParagraphBlocks(strings) {
         console.dir(strings)
         throw new Error(`Invalid argument: Expected a non-empty array.`)
     }
+
+    /* Remove non-string elements */
+    const validStrings = strings.filter((string) => typeof string === "string")
     
     /* Check each string's length, get a new array of strings */
-    const lengthCheckedStrings = strings.flatMap((string) => enforceStringLength(string))
+    const lengthCheckedStrings = validStrings.flatMap((string) => enforceStringLength(string))
 
     /* Turn each string into an array with a single Rich Text Object */
     const richTextObjects = lengthCheckedStrings.map((string) => buildRichTextObj(string))

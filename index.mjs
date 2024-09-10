@@ -5,6 +5,7 @@ import {
 } from "./blocks.mjs"
 import { setIcon } from "./emoji-and-files.mjs";
 import { page_meta, page_props } from "./page-meta.mjs";
+import { quickPages } from "./pages.mjs";
 
 const NotionHelper = {
     buildRichTextObj,
@@ -12,7 +13,8 @@ const NotionHelper = {
     block,
     setIcon,
     page_meta,
-    page_props
+    page_props,
+    quickPages
 }
 
 export default NotionHelper

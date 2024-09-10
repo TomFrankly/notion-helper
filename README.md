@@ -42,13 +42,247 @@ const paragraphBlocks = makeParagraphBlocks(quotes);
 const paragraphBlocks = NotionHelper.makeParagraphBlocks(quotes);
 ```
 
-Notion Helper currently contains three direct functions you can use:
+Notion Helper currently contains four direct functions you can use:
 
-- makeParagraphBlocks() - takes an array of strings and returns an array of [Paragraph blocks](https://developers.notion.com/reference/block#paragraph) without any special formatting or links. Provides a very quick way to prep a lot of text for sending to Notion.
-- buildRichTextObj() - takes a string, options array, and URL and creates a [Rich Text Object](https://developers.notion.com/reference/rich-text) array (use [flatMap()](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/flatMap) if you're inserting its output into another array). Splits strings over the [character limit](https://developers.notion.com/reference/request-limits#limits-for-property-values) for you as well. _Currently only works for text objects; mentions and equations aren't supported yet._.
-- setIcon() - takes a string, which should be a single emoji (🌵) or an image URL and returns the correct object (emoji or external) value for an `icon` property.
+- `quickPages()` - lets you easily create valid page objects with property values and child blocks using very simple JSON objects. This is the highest-level function in the library – you can see its documentation below.
+- `makeParagraphBlocks()` - takes an array of strings and returns an array of [Paragraph blocks](https://developers.notion.com/reference/block#paragraph) without any special formatting or links. Provides a very quick way to prep a lot of text for sending to Notion.
+- `buildRichTextObj()` - takes a string, options array, and URL and creates a [Rich Text Object](https://developers.notion.com/reference/rich-text) array (use [flatMap()](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/flatMap) if you're inserting its output into another array). Splits strings over the [character limit](https://developers.notion.com/reference/request-limits#limits-for-property-values) for you as well. _Currently only works for text objects; mentions and equations aren't supported yet._.
+- `setIcon()` - takes a string, which should be a single emoji (🌵) or an image URL and returns the correct object (emoji or external) value for an `icon` property.
 
-It also provides objects with methods for quickly creating pages and blocks:
+### Using `quickPages()`
+
+Often you'll have an array of relatively simple data that you want to turn into Notion pages:
+
+```js
+const tasks = [
+    {
+        icon: "🔨",
+        task: "Build Standing Desk",
+        due: "2024-09-10",
+        status: "Not started",
+    },
+    {
+        task: "Mount Overhead Lights",
+        due: "2024-09-11",
+        status: "Not started",
+        children: [
+            "Mount clamp to joist and tighten",
+            "Attach arm to clamp",
+            "Mount video light to arm",
+            "Run power cable through ceiling panels"
+        ],
+    },
+    { task: "Set Up Camera", due: "2024-09-11", status: "Not started" },
+];
+```
+
+Say you want to create a page in a Tasks database for each of these, setting the relevant properties and creating a list of To-Do blocks in the page body for any that have a `children` array.
+
+<details>
+<summary>The Notion API requires a much more verbose page data object for each of these:</summary>
+
+```js
+[
+  {
+    parent: { type: 'database_id', database_id: 'abcdefghijklmnopqrstuvwxyz' },
+    icon: { type: 'emoji', emoji: '🔨' },
+    properties: {
+      Name: {
+        title: [
+          {
+            type: 'text',
+            text: { content: 'Build Standing Desk' },
+            annotations: {}
+          }
+        ]
+      },
+      'Due Date': { date: { start: '2024-09-10', end: null } },
+      Status: { status: { name: 'Not started' } }
+    }
+  },
+  {
+    parent: { type: 'database_id', database_id: 'abcdefghijklmnopqrstuvwxyz' },
+    properties: {
+      Name: {
+        title: [
+          {
+            type: 'text',
+            text: { content: 'Mount Overhead Lights' },
+            annotations: {}
+          }
+        ]
+      },
+      'Due Date': { date: { start: '2024-09-11', end: null } },
+      Status: { status: { name: 'Not started' } }
+    },
+    children: [
+      {
+        type: 'to_do',
+        to_do: {
+          rich_text: [
+            {
+              type: 'text',
+              text: { content: 'Mount clamp to joist and tighten' },
+              annotations: {}
+            }
+          ],
+          checked: false,
+          color: 'default',
+          children: []
+        }
+      },
+      {
+        type: 'to_do',
+        to_do: {
+          rich_text: [
+            {
+              type: 'text',
+              text: { content: 'Attach arm to clamp' },
+              annotations: {}
+            }
+          ],
+          checked: false,
+          color: 'default',
+          children: []
+        }
+      },
+      {
+        type: 'to_do',
+        to_do: {
+          rich_text: [
+            {
+              type: 'text',
+              text: { content: 'Mount video light to arm' },
+              annotations: {}
+            }
+          ],
+          checked: false,
+          color: 'default',
+          children: []
+        }
+      },
+      {
+        type: 'to_do',
+        to_do: {
+          rich_text: [
+            {
+              type: 'text',
+              text: { content: 'Run power cable through ceiling panels' },
+              annotations: {}
+            }
+          ],
+          checked: false,
+          color: 'default',
+          children: []
+        }
+      }
+    ]
+  },
+  {
+    parent: { type: 'database_id', database_id: 'abcdefghijklmnopqrstuvwxyz' },
+    properties: {
+      Name: {
+        title: [
+          {
+            type: 'text',
+            text: { content: 'Set Up Camera' },
+            annotations: {}
+          }
+        ]
+      },
+      'Due Date': { date: { start: '2024-09-11', end: null } },
+      Status: { status: { name: 'Not started' } }
+    }
+  }
+]
+```
+</details>
+
+Using `quickPages()`, you can create an array of valid page objects like the one in the toggle above.
+
+With it, you can pass an options object with:
+
+- `parent`: A parent page/database
+- `parent_type`: The parent's type ("page_id" or "database_id")
+- `pages`: Your array of objects
+- `schema`: A schema describing how your object's properties map to Notion property names and types
+- `childrenFn`: An optional callback that will be excuted on all array elements in any object's `children` property, creating a `children` array within the Notion page object
+
+> [!TIP]
+> You can also pass a single object, but you'll still get an array back.
+
+The schema object should contain a property for each property in the Notion database you'd like to edit. For each, the key should map to a key present in at least one of your objects, and its value should be an array containing the matching Notion database property's name and type.
+
+Valid property types include all those listed in the `page_props` section below.
+
+> [!NOTE]
+> If the `parent` has the type `page_id` (i.e. it's a page, not a database), the only valid value will be `["title", "title"]`, which represent's the page's title.
+
+Here's an example of simple usage, operating on the `tasks` array shown above:
+
+```js
+const propertySchema = {
+    task: ["Name", "title"],
+    due: ["Due Date", "date"],
+    status: ["Status", "status"],
+}
+
+const pages = quickPages({
+    parent: database_id,
+    parent_type: "database_id",
+    pages: tasks,
+    schema: propertySchema,
+})
+
+/* Create a page for each returned page object */
+const responses = await Promise.all(
+    pages.map((page) => notion.pages.create(page))
+)
+```
+
+Optionally, your schema can also include custom properties that represent the icon, cover, and children. If you want to specify these, use the convention below to tell the function which properties correspond to the `icon`, `cover`, and `children` properties.
+
+By default, the function will look for `icon`, `cover`, and `children` in your pages object, so you don't need to specify those keys in your schema if they're named that way.
+
+```js
+const schema = [
+    favicon: ["Icon", "icon"],
+    bg_image: ["Cover", "cover"],
+    body: ["Children", "children"]
+]
+```
+
+By default, if you have a string or an array of strings in any object's `children` property, those strings will be turned into [Paragraph](https://developers.notion.com/reference/block#paragraph) blocks.
+
+However, you can use the `childrenFn` parameter to pass a callback function. All array elements in each object's `children` property (if present) will be run through this callback. `childrenFn` should take in an array as its argument and return an array. The returned array will be used directly as the `children` array in the final page object.
+
+In the example below, `childrenFn` is used to create a [To-Do](https://developers.notion.com/reference/block#to-do) block for each children item:
+
+```js
+const pages = quickPages({
+    parent: database_id,
+    parent_type: "database_id",
+    pages: tasks,
+    schema: propertySchema,
+    childrenFn: (value) => value.map((line) => NotionHelper.block.to_do.createBlock({rtArray: NotionHelper.buildRichTextObj(line)}))
+})
+```
+
+Note how other Notion Helper functions are used in this example callback to easily construct the To-Do blocks.
+
+If an object's `children` property already contains an array of prepared Block objects, simply make it the return value of `childrenFn`. Otherwise, `quickPages()` will treat it as invalid children content and strip it out. Without a `childrenFn`, `quickPages()` will only automatically process a string or array of strings in a `children` property.
+
+```js
+const pages = quickPages({
+    parent: database_id,
+    parent_type: "database_id",
+    pages: tasks,
+    schema: propertySchema,
+    childrenFn: (value) => value
+})
+```
+
+This library also provides objects with methods for quickly creating pages and blocks:
 
 ### `block`
 
@@ -148,7 +382,5 @@ const page = {
 ## Learn More
 
 If you'd like to learn the Notion API from scratch, start with my free [Notion API crash course](https://thomasjfrank.com/notion-api-crash-course/).
-
-Once you get used to writing objects for API requests, you might find yourself back here 😛
 
 Questions? [Ask me on Twitter!](https://twitter.com/TomFrankly)

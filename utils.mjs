@@ -35,9 +35,10 @@ export function isValidURL(string) {
 export function validateImageURL(url) {
     try {
         const supportedFormats = CONSTANTS.IMAGE_SUPPORT.FORMATS.join("|");
-        const formatRegex = new RegExp(`\\.(${supportedFormats})$`, i);
+        const formatRegex = new RegExp(`\\.(${supportedFormats})$`, 'i');
         return formatRegex.test(url) && isValidURL(url);
     } catch (e) {
+        console.error(`${url} is not a valid image URL.`)
         return false;
     }
 }
