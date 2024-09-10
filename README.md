@@ -95,7 +95,7 @@ The `parent` property's `createMeta()` method takes an object containing the par
 
 ```
 const page = {
-    parent: NotionHelper.page_meta.parent.createMeta({parentID, "database"}),
+    parent: NotionHelper.page_meta.parent.createMeta({id: parentID, type: "database"}),
     icon: NotionHelper.page_meta.icon.createMeta("🎃"),
     cover: NotionHelper.page_meta.cover.createMeta("https://i.imgur.com/5vSShIw.jpeg")
 }
