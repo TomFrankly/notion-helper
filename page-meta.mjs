@@ -388,7 +388,12 @@ function validateValue(value, type) {
     }
 
     if (type === "number") {
+        if (typeof value !== "number") {
+            console.warn(`Invalid data type passed to a number property. Returning null.`)
+            return null
+        }
 
+        return value
     }
 
     if (type === "boolean") {
