@@ -147,6 +147,7 @@ export function quickPages({ parent, parent_type, pages, schema, childrenFn }) {
                 pageChildren = [];
             }
 
+            console.log(typeof childrenFn)
             if (typeof childrenFn === "function") {
                 finalPage.children = childrenFn(pageChildren);
             } else if (typeof pageChildren[0] === "string") {

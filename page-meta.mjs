@@ -176,7 +176,7 @@ export const page_props = {
     number: {
         type: "number",
         createProp: (value) => ({
-            number: value,
+            number: typeof value === 'number' ? value : null,
         }),
     },
 
