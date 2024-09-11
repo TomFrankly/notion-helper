@@ -113,8 +113,13 @@ export function quickPages({ parent, parent_type, pages, schema, childrenFn }) {
                     value = val;
                 }
 
-                acc[propName] =
+                const propResult =
                     page_props[propType].createProp(value);
+
+                const propKey = Object.keys(propResult)[0]
+                if (propResult[propKey] !== null) {
+                    acc[propName] = propResult
+                }
 
                 return acc;
             }, {});

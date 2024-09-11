@@ -1,4 +1,6 @@
 import { setIcon } from "./emoji-and-files.mjs";
+import { buildRichTextObj } from "./rich-text.mjs";
+import { isValidURL, validateDate } from "./utils.mjs";
 
 /*
  * Object with methods for constructing Notion page metadata, including parent, cover, and icon.
@@ -63,11 +65,16 @@ export const page_props = {
      * @method createProp
      * @param {Object[]} value - The array of Rich Text Objects for the title content.
      * @returns {Object} A title property object.
+     *
+     * Notion API will throw an error if title doesn't contain an array of Rich Text object(s) (RTOs).
+     * createProp() will convert a string, or array of strings, to an array of Rich Text object(s).
+     * On other invalid input, it will throw an error.
      */
     title: {
         type: "string[]",
+        returns: "rich_text",
         createProp: (value) => ({
-            title: value,
+            title: validateValue(value, "rich_text"),
         }),
     },
 
@@ -80,8 +87,9 @@ export const page_props = {
      */
     rich_text: {
         type: "string[]",
+        returns: "rich_text",
         createProp: (value) => ({
-            rich_text: value,
+            rich_text: validateValue(value, "rich_text"),
         }),
     },
 
@@ -94,8 +102,9 @@ export const page_props = {
      */
     checkbox: {
         type: "boolean",
+        returns: "boolean",
         createProp: (value) => ({
-            checkbox: value,
+            checkbox: validateValue(value, "boolean"),
         }),
     },
 
@@ -109,12 +118,23 @@ export const page_props = {
      */
     date: {
         type: "string",
-        createProp: (start, end = null) => ({
-            date: {
-                start: start,
-                end: end,
-            },
-        }),
+        returns: "date",
+        createProp: (start, end = null) => {
+            const date = {
+                date: {
+                    start: validateValue(start, "date"),
+                    end: validateValue(end, "date"),
+                },
+            }
+
+            if (!date || !date.date || date.date.start == null) {
+                return {
+                    date: null
+                }
+            }
+
+            return date
+        }
     },
 
     /**
@@ -126,8 +146,9 @@ export const page_props = {
      */
     email: {
         type: "string",
+        returns: "email",
         createProp: (value) => ({
-            email: value,
+            email: validateValue(value, "string"),
         }),
     },
 
@@ -140,14 +161,31 @@ export const page_props = {
      */
     files: {
         type: "string[]",
-        createProp: (fileArray) => ({
-            files: fileArray.map((file) => ({
-                name: file.name,
-                external: {
-                    url: file.url,
-                },
-            })),
-        }),
+        returns: "array", // Type not currently used for validation
+        createProp: (fileArray) => {
+            const files = fileArray.map((file) => {
+                if (!validateValue(file.url, "url")) {
+                    return null
+                } else {
+                    return {
+                        name: validateValue(file.name, "string"),
+                        external: {
+                            url: validateValue(file.url, "url"),
+                        },
+                    }
+                }
+            })
+
+            if (files.every((file) => file === null)) {
+                return {
+                    files: null
+                }
+            } else {
+                return {
+                    files: files
+                }
+            }
+        },
     },
 
     /**
@@ -159,9 +197,10 @@ export const page_props = {
      */
     multi_select: {
         type: "string[]",
+        returns: "array", // Not currently used for validation
         createProp: (valuesArray) => ({
             multi_select: valuesArray.map((value) => ({
-                name: value,
+                name: validateValue(value, "string"),
             })),
         }),
     },
@@ -175,8 +214,9 @@ export const page_props = {
      */
     number: {
         type: "number",
+        returns: "number",
         createProp: (value) => ({
-            number: typeof value === 'number' ? value : null,
+            number: validateValue(value, "number"),
         }),
     },
 
@@ -189,12 +229,27 @@ export const page_props = {
      */
     people: {
         type: "string[]",
-        createProp: (personArray) => ({
-            people: personArray.map((person) => ({
-                object: "user",
-                id: person,
-            })),
-        }),
+        returns: "array", // Not currently used for validation
+        createProp: (personArray) => {
+            const people = personArray.map((person) => {
+                if (!validateValue(person, "string")) {
+                    return null
+                } else {
+                    return {
+                        object: "user",
+                        id: validateValue(person, "string"),
+                    }
+                }
+            })
+
+            if (people.every((person) => person === null)) {
+                return null
+            } else {
+                return {
+                    people: people
+                }
+            }
+        },
     },
 
     /**
@@ -206,8 +261,9 @@ export const page_props = {
      */
     phone_number: {
         type: "string",
+        returns: "string",
         createProp: (value) => ({
-            phone_number: value,
+            phone_number: validateValue(value, "string"),
         }),
     },
 
@@ -220,11 +276,25 @@ export const page_props = {
      */
     relation: {
         type: "string[]",
-        createProp: (pageArray) => ({
-            relation: pageArray.map((page) => ({
-                id: page,
-            })),
-        }),
+        createProp: (pageArray) => {
+            const pages = pageArray.map((page) => {
+                if (!validateValue(page, "string")) {
+                    return null
+                } else {
+                    return {
+                        id: validateValue(page, "string"),
+                    }
+                }
+            })
+
+            if (pages.every((page) => page === null)) {
+                return null
+            } else {
+                return {
+                    relation: pages
+                }
+            }
+        },
     },
 
     /**
@@ -236,9 +306,10 @@ export const page_props = {
      */
     select: {
         type: "string",
+        returns: "string",
         createProp: (value) => ({
             select: {
-                name: value,
+                name: validateValue(value, "string"),
             },
         }),
     },
@@ -252,9 +323,10 @@ export const page_props = {
      */
     status: {
         type: "string",
+        returns: "string",
         createProp: (value) => ({
             status: {
-                name: value,
+                name: validateValue(value, "string"),
             },
         }),
     },
@@ -268,8 +340,93 @@ export const page_props = {
      */
     url: {
         type: "string",
+        returns: "string",
         createProp: (value) => ({
-            url: value,
+            url: validateValue(value, "string"),
         }),
     },
 };
+
+/**
+ * Validates values passed to the createProp() methods above. Performs some transformation in certain cases.
+ * 
+ * @param {*} value - the value being passed to createProp(), which invokes this function
+ * @param {string} type - the type of value expected by this Notion API property
+ * @returns 
+ */
+function validateValue(value, type) {
+    if (!value || !type || typeof type !== "string") {
+        console.error(
+            `Invalid value or type variable provided to validateValue().`
+        );
+        throw new Error(
+            `Invalid value or type vairable provided to validateValue().`
+        );
+    }
+
+    if (type === "rich_text") {
+        let finalValue;
+        if (!Array.isArray(value) && typeof value !== 'string') {
+            console.error(`Invalid data type passed to a rich_text property. Returning null for this property.`)
+            finalValue = null
+            return finalValue
+        }
+        
+        if (typeof value === "string") {
+            finalValue = buildRichTextObj(value); // If value is a string, create single-element RTO array
+        }
+
+        if (Array.isArray(value)) {
+            if (value.every((element) => typeof element === "string")) {
+                finalValue = value.flatMap((line) => buildRichTextObj(line)); // If value is array of strings, create RTO array
+            } else {
+                finalValue = value; // Else assume value is a valid array of RTOs already
+            }
+        }
+
+        return finalValue
+    }
+
+    if (type === "number") {
+
+    }
+
+    if (type === "boolean") {
+        if (typeof value !== "boolean") {
+            console.warn(`Invalid data type passed to a boolean property. Returning null.`)
+            return null
+        }
+
+        return value
+    }
+
+    if (type === "date") {
+        return validateDate(value)
+    }
+
+    if (type === "string") {
+        if (typeof value !== "string") {
+            console.warn(`Invalid data type passed to a string property. Returning null.`)
+            return null
+        }
+
+        return value
+    }
+
+    if (type === "url") {
+        if (typeof value !== "string") {
+            console.warn(`Invalid data type passed to a url property. Returning null.`)
+            return null
+        }
+
+        if (isValidURL(value)) {
+            return value
+        } else {
+            console.warn(`Invalid URL. Returning null.`)
+            return null
+        }
+    }
+
+    console.warn(`Type specified to validateValue is not a valid type. Returning the input...`)
+    return value
+}

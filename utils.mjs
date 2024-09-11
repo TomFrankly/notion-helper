@@ -135,3 +135,43 @@ export function enforceStringLength(string, limit) {
         return chunks;
     }
 }
+
+/**
+ * Validates Date object or string input that represents a date, and converts it to an ISO-8601 date string if possible.
+ * 
+ * @param {(string|Date)} date - a Date object or string representing a date 
+ * @returns {string}
+ */
+export function validateDate(dateInput) {
+    let date
+
+    if (dateInput === null) {
+        return null
+    }
+
+    if (dateInput instanceof Date) {
+        date = dateInput
+    }
+
+    else if (typeof dateInput === 'string') {
+        date = new Date(dateInput)
+    }
+
+    else {
+        console.warn(`Invalid input: Expected a Date object or string representing a date. Returning null.`)
+        return null
+    }
+
+    if (!isNaN(date.getTime())) {
+        const isoString = date.toISOString()
+
+        if (typeof dateInput === 'string' && !dateInput.includes(':') && !dateInput.includes('T')) {
+            return isoString.split('T')[0]
+        } else {
+            return isoString
+        }
+    } else {
+        console.warn(`Invalid date string or Date object provided. Returning null.`)
+        return null
+    }
+}
