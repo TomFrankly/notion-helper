@@ -209,7 +209,7 @@ export const page_props = {
      * Number property method.
      * @property {PropType} number - Number property type.
      * @method createProp
-     * @param {number} value - The numeric value.
+     * @param {(number|string)} value - The numeric value. A string may also be passed, and createProp() will attempt to convert it to a number.
      * @returns {Object} A number property object.
      */
     number: {
@@ -388,6 +388,17 @@ function validateValue(value, type) {
     }
 
     if (type === "number") {
+        if (typeof value === "string") {
+            console.warn(`String data passed to a number property. Attempting to convert to a number.`)
+            const num = Number(value)
+
+            if (!isNaN(num)) {
+                return num
+            } else {
+                return null
+            }
+        }
+        
         if (typeof value !== "number") {
             console.warn(`Invalid data type passed to a number property. Returning null.`)
             return null
