@@ -216,9 +216,9 @@ export function createNotion() {
         /**
          * Sets the parent database for the page.
          * @param {string} database_id - The ID of the parent database.
-         * @returns {Object} The builder instance for method chaining.
+         * @returns {this} The builder instance for method chaining.
          */
-        dbId(database_id) {
+        parentDb(database_id) {
             data.parent = page_meta.parent.createMeta({
                 id: database_id,
                 type: "database_id",
@@ -231,9 +231,9 @@ export function createNotion() {
         /**
          * Sets the parent page for the page.
          * @param {string} page_id - The ID of the parent page.
-         * @returns {Object} The builder instance for method chaining.
+         * @returns {this} The builder instance for method chaining.
          */
-        pageId(page_id) {
+        parentPage(page_id) {
             data.parent = page_meta.parent.createMeta({
                 id: page_id,
                 type: "page_id",
@@ -244,9 +244,41 @@ export function createNotion() {
         },
 
         /**
+         * Adds a page_id property. Used for updating page properties or doing read operations.
+         * @param {string} page_id - The ID of the page
+         * @returns {this} The builder instance for method chaining.
+         */
+        pageId(page_id) {
+            data.page_id = page_meta.page.createMeta(page_id)
+            return this;
+        },
+
+        /**
+         * Adds a property_id property. Used for fetching a page property item.
+         * @param {string} property_id - The ID of the property to be fetched.
+         * @returns {this} The builder instance for method chaining.
+         */
+        propertyId(property_id) {
+            data.property_id = page_meta.property.createMeta(property_id)
+            return this;
+        },
+
+        /**
+         * Adds a block_id property. Used for all Block endpoints.
+         * @param {string} block_id - The ID of the block
+         * @returns {this} The builder instance for method chaining.
+         */
+        blockId(block_id) {
+            data.block_id = page_meta.block.createMeta(block_id)
+            hasPageParent = true;
+            nestingLevel++;
+            return this;
+        },
+
+        /**
          * Sets the cover image for the page.
          * @param {string} url - The URL of the cover image.
-         * @returns {Object} The builder instance for method chaining.
+         * @returns {this} The builder instance for method chaining.
          */
         cover(url) {
             data.cover = page_meta.cover.createMeta(url);
@@ -256,7 +288,7 @@ export function createNotion() {
         /**
          * Sets the icon for the page.
          * @param {string} url - The URL of the icon image or an emoji.
-         * @returns {Object} The builder instance for method chaining.
+         * @returns {this} The builder instance for method chaining.
          */
         icon(url) {
             data.icon = page_meta.icon.createMeta(url);
@@ -270,7 +302,7 @@ export function createNotion() {
          * @param {string} type - The type of the property.
          * @param {*} value - The value of the property.
          * @throws {Error} If the property type is invalid.
-         * @returns {Object} The builder instance for method chaining.
+         * @returns {this} The builder instance for method chaining.
          */
         property(name, type, value) {
             if (!page_props[type]) {
@@ -287,7 +319,7 @@ export function createNotion() {
          * Sets a title property value for the page.
          * @param {string} name - The name of the property.
          * @param {string|Array} value - The title value.
-         * @returns {Object} The builder instance for method chaining.
+         * @returns {this} The builder instance for method chaining.
          */
         title(name, value) {
             data.properties[name] = page_props.title.createProp(value);
@@ -299,7 +331,7 @@ export function createNotion() {
          * Sets a rich text property value for the page.
          * @param {string} name - The name of the property.
          * @param {string|Array} value - The rich text value.
-         * @returns {Object} The builder instance for method chaining.
+         * @returns {this} The builder instance for method chaining.
          */
         richText(name, value) {
             data.properties[name] = page_props.rich_text.createProp(value);
@@ -311,7 +343,7 @@ export function createNotion() {
          * Sets a checkbox property value for the page.
          * @param {string} name - The name of the property.
          * @param {boolean} value - The checkbox value.
-         * @returns {Object} The builder instance for method chaining.
+         * @returns {this} The builder instance for method chaining.
          */
         checkbox(name, value) {
             data.properties[name] = page_props.checkbox.createProp(value);
@@ -324,7 +356,7 @@ export function createNotion() {
          * @param {string} name - The name of the property.
          * @param {string} start - The start date.
          * @param {string} [end=null] - The end date (optional).
-         * @returns {Object} The builder instance for method chaining.
+         * @returns {this} The builder instance for method chaining.
          */
         date(name, start, end = null) {
             data.properties[name] = page_props.date.createProp(start, end);
@@ -336,7 +368,7 @@ export function createNotion() {
          * Sets a email property value for the page.
          * @param {string} name - The name of the property.
          * @param {string} value - The email value.
-         * @returns {Object} The builder instance for method chaining.
+         * @returns {this} The builder instance for method chaining.
          */
         email(name, value) {
             data.properties[name] = page_props.email.createProp(value);
@@ -351,7 +383,7 @@ export function createNotion() {
          * 
          * @param {string} name - The name of the property.
          * @param {Array} fileArray - An array of file objects.
-         * @returns {Object} The builder instance for method chaining.
+         * @returns {this} The builder instance for method chaining.
          */
         files(name, fileArray) {
             data.properties[name] = page_props.files.createProp(fileArray);
@@ -363,7 +395,7 @@ export function createNotion() {
          * Sets a multi-select property value for the page.
          * @param {string} name - The name of the property.
          * @param {Array} valuesArray - An array of selected values.
-         * @returns {Object} The builder instance for method chaining.
+         * @returns {this} The builder instance for method chaining.
          */
         multiSelect(name, valuesArray) {
             data.properties[name] =
@@ -376,7 +408,7 @@ export function createNotion() {
          * Sets a number property value for the page.
          * @param {string} name - The name of the property.
          * @param {number} value - The number value.
-         * @returns {Object} The builder instance for method chaining.
+         * @returns {this} The builder instance for method chaining.
          */
         number(name, value) {
             data.properties[name] = page_props.number.createProp(value);
@@ -388,7 +420,7 @@ export function createNotion() {
          * Sets a people property value for the page.
          * @param {string} name - The name of the property.
          * @param {Array} personArray - An array of person IDs.
-         * @returns {Object} The builder instance for method chaining.
+         * @returns {this} The builder instance for method chaining.
          */
         people(name, personArray) {
             data.properties[name] = page_props.people.createProp(personArray);
@@ -400,7 +432,7 @@ export function createNotion() {
          * Sets a phone number property value for the page.
          * @param {string} name - The name of the property.
          * @param {string} value - The phone number value.
-         * @returns {Object} The builder instance for method chaining.
+         * @returns {this} The builder instance for method chaining.
          */
         phoneNumber(name, value) {
             data.properties[name] = page_props.phone_number.createProp(value);
@@ -412,7 +444,7 @@ export function createNotion() {
          * Sets a relation property value for the page.
          * @param {string} name - The name of the property.
          * @param {Array} pageArray - An array of related page IDs.
-         * @returns {Object} The builder instance for method chaining.
+         * @returns {this} The builder instance for method chaining.
          */
         relation(name, pageArray) {
             data.properties[name] = page_props.relation.createProp(pageArray);
@@ -424,7 +456,7 @@ export function createNotion() {
          * Sets a select property value for the page.
          * @param {string} name - The name of the property.
          * @param {string} value - The selected value.
-         * @returns {Object} The builder instance for method chaining.
+         * @returns {this} The builder instance for method chaining.
          */
         select(name, value) {
             data.properties[name] = page_props.select.createProp(value);
@@ -436,7 +468,7 @@ export function createNotion() {
          * Sets a status property value for the page.
          * @param {string} name - The name of the property.
          * @param {string} value - The status value.
-         * @returns {Object} The builder instance for method chaining.
+         * @returns {this} The builder instance for method chaining.
          */
         status(name, value) {
             data.properties[name] = page_props.status.createProp(value);
@@ -448,7 +480,7 @@ export function createNotion() {
          * Sets a URL property value for the page.
          * @param {string} name - The name of the property.
          * @param {string} value - The URL value.
-         * @returns {Object} The builder instance for method chaining.
+         * @returns {this} The builder instance for method chaining.
          */
         url(name, value) {
             data.properties[name] = page_props.url.createProp(value);
@@ -463,7 +495,7 @@ export function createNotion() {
          * @param {string} blockType - The type of block to create as a parent.
          * @param {Object} [options={}] - Options for creating the block, specific to the block type.
          * @throws {Error} If the nesting level exceeds 2 or if the block type doesn't support children.
-         * @returns {Object} The builder instance for method chaining.
+         * @returns {this} The builder instance for method chaining.
          * @example
          * notion.startParent('toggle', 'Click to expand')
          *       .paragraph('This is inside the toggle')
@@ -502,7 +534,7 @@ export function createNotion() {
         /**
          * Ends the current parent block and moves up one level in the block hierarchy.
          *
-         * @returns {Object} The builder instance for method chaining.
+         * @returns {this} The builder instance for method chaining.
          * @example
          * notion.startParent('toggle', 'Click to expand')
          *       .paragraph('This is inside the toggle')
@@ -521,7 +553,7 @@ export function createNotion() {
          *
          * @param {string} blockType - The type of block to add.
          * @param {Object} [options={}] - Options for creating the block, specific to the block type.
-         * @returns {Object} The builder instance for method chaining.
+         * @returns {this} The builder instance for method chaining.
          * @example
          * notion.addBlock('paragraph', 'This is a paragraph.');
          *
@@ -539,6 +571,7 @@ export function createNotion() {
 
         /**
          * Adds a paragraph block to the current stack.
+         * @returns {this} The builder instance for method chaining.
          * @see block.paragraph.createBlock for full documentation
          */
         paragraph(options) {
@@ -547,6 +580,7 @@ export function createNotion() {
 
         /**
          * Adds a heading_1 block to the current stack.
+         * @returns {this} The builder instance for method chaining.
          * @see block.heading_1.createBlock for full documentation
          */
         heading1(options) {
@@ -555,6 +589,7 @@ export function createNotion() {
 
         /**
          * Adds a heading_2 block to the current stack.
+         * @returns {this} The builder instance for method chaining.
          * @see block.heading_2.createBlock for full documentation
          */
         heading2(options) {
@@ -563,6 +598,7 @@ export function createNotion() {
 
         /**
          * Adds a heading_3 block to the current stack.
+         * @returns {this} The builder instance for method chaining.
          * @see block.heading_3.createBlock for full documentation
          */
         heading3(options) {
@@ -571,14 +607,25 @@ export function createNotion() {
 
         /**
          * Adds a bulleted_list_item block to the current stack.
+         * @returns {this} The builder instance for method chaining.
          * @see block.bulleted_list_item.createBlock for full documentation
          */
         bulletedListItem(options) {
             return this.addBlock("bulleted_list_item", options);
         },
+        
+        /**
+         * Shorthand alias for bulletedListItem(). Adds a bulleted_list_item block to the current stack.
+         * @returns {this} The builder instance for method chaining.
+         * @see block.bulleted_list_item.createBlock for full documentation
+         */
+        bullet(options) {
+            return this.bulletedListItem(options)
+        },
 
         /**
          * Adds a numbered_list_item block to the current stack.
+         * @returns {this} The builder instance for method chaining.
          * @see block.numbered_list_item.createBlock for full documentation
          */
         numberedListItem(options) {
@@ -586,7 +633,17 @@ export function createNotion() {
         },
 
         /**
+         * Shorthand alias for numberedListItem(). Added a numbered_list_item block to the current stack.
+         * @returns {this} The builder instance for method chaining.
+         * @see block.numbered_list_item.createBlock for full documentation
+         */
+        num(options) {
+            return this.numberedListItem(options)
+        },
+
+        /**
          * Adds a to_do block to the current stack.
+         * @returns {this} The builder instance for method chaining.
          * @see block.to_do.createBlock for full documentation
          */
         toDo(options) {
@@ -595,6 +652,7 @@ export function createNotion() {
 
         /**
          * Adds a toggle block to the current stack.
+         * @returns {this} The builder instance for method chaining.
          * @see block.toggle.createBlock for full documentation
          */
         toggle(options) {
@@ -603,6 +661,7 @@ export function createNotion() {
 
         /**
          * Adds a code block to the current stack.
+         * @returns {this} The builder instance for method chaining.
          * @see block.code.createBlock for full documentation
          */
         code(options) {
@@ -611,6 +670,7 @@ export function createNotion() {
 
         /**
          * Adds a quote block to the current stack.
+         * @returns {this} The builder instance for method chaining.
          * @see block.quote.createBlock for full documentation
          */
         quote(options) {
@@ -619,6 +679,7 @@ export function createNotion() {
 
         /**
          * Adds a callout block to the current stack.
+         * @returns {this} The builder instance for method chaining.
          * @see block.callout.createBlock for full documentation
          */
         callout(options) {
@@ -627,6 +688,7 @@ export function createNotion() {
 
         /**
          * Adds a divider block to the current stack.
+         * @returns {this} The builder instance for method chaining.
          * @see block.divider.createBlock for full documentation
          */
         divider() {
@@ -635,6 +697,7 @@ export function createNotion() {
 
         /**
          * Adds an image block to the current stack.
+         * @returns {this} The builder instance for method chaining.
          * @see block.image.createBlock for full documentation
          */
         image(options) {
@@ -643,6 +706,7 @@ export function createNotion() {
 
         /**
          * Adds a video block to the current stack.
+         * @returns {this} The builder instance for method chaining.
          * @see block.video.createBlock for full documentation
          */
         video(options) {
@@ -651,6 +715,7 @@ export function createNotion() {
 
         /**
          * Adds a file block to the current stack.
+         * @returns {this} The builder instance for method chaining.
          * @see block.file.createBlock for full documentation
          */
         file(options) {
@@ -659,6 +724,7 @@ export function createNotion() {
 
         /**
          * Adds a pdf block to the current stack.
+         * @returns {this} The builder instance for method chaining.
          * @see block.pdf.createBlock for full documentation
          */
         pdf(options) {
@@ -667,6 +733,7 @@ export function createNotion() {
 
         /**
          * Adds a bookmark block to the current stack.
+         * @returns {this} The builder instance for method chaining.
          * @see block.bookmark.createBlock for full documentation
          */
         bookmark(options) {
@@ -675,6 +742,7 @@ export function createNotion() {
 
         /**
          * Adds an embed block to the current stack.
+         * @returns {this} The builder instance for method chaining.
          * @see block.embed.createBlock for full documentation
          */
         embed(options) {
@@ -683,6 +751,7 @@ export function createNotion() {
 
         /**
          * Adds a table_of_contents block to the current stack.
+         * @returns {this} The builder instance for method chaining.
          * @see block.table_of_contents.createBlock for full documentation
          */
         tableOfContents(options) {
@@ -691,6 +760,7 @@ export function createNotion() {
 
         /**
          * Adds a table block to the current stack.
+         * @returns {this} The builder instance for method chaining.
          * @see block.table.createBlock for full documentation
          */
         table(options) {
@@ -699,6 +769,7 @@ export function createNotion() {
 
         /**
          * Adds a table_row block to the current stack.
+         * @returns {this} The builder instance for method chaining.
          * @see block.table_row.createBlock for full documentation
          */
         tableRow(options) {
@@ -708,7 +779,7 @@ export function createNotion() {
         /**
          * Builds and returns the final Notion object based on the current state of the builder.
          *
-         * @returns {Object} An object containing the built content and any additional blocks.
+         * @returns {this} An object containing the built content and any additional blocks.
          * @property {Object|Array} content - The main content of the built object. This can be a full page object, a properties object, or an array of blocks, depending on what was added to the builder.
          * @property {Array} additionalBlocks - Any blocks that exceed Notion's maximum block limit per request. These will need to be added in subsequent requests.
          * @throws {Error} If no data was added to the builder.
@@ -770,7 +841,7 @@ export function createNotion() {
         /**
          * Resets the builder to its initial state, clearing all added content.
          *
-         * @returns {Object} The builder instance for method chaining.
+         * @returns {this} The builder instance for method chaining.
          * @example
          * const notion = createNotion();
          * notion
