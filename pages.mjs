@@ -183,7 +183,7 @@ export function createNotion() {
      * @private
      */
     function resetBuilder() {
-        date = {
+        data = {
             properties: {},
             children: [],
         };
