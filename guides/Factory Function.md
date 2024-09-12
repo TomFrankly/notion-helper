@@ -1,13 +1,14 @@
 # Quick Guide: Using the createNotion Factory Function
 
-The `createNotion` factory function provides a fluent interface for creating Notion pages and blocks. Here's how to use it:
+The `createNotion` factory function provides a powerful interface for quickly creating Notion pages, block arrays, or property objects. Here's how to use it:
 
 ## Basic Usage
 
 Import and create a builder instance:
 
 ```javascript
-import { createNotion } from "notion-helper";
+import NotionHelper from "notion-helper";
+const { createNotion } = NotionHelper;
 const notion = createNotion();
 ```
 
