@@ -789,4 +789,6 @@ export function createNotion() {
             return this;
         },
     };
+
+    return builder
 }
