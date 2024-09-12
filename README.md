@@ -347,22 +347,14 @@ const builder = createNotion()
   .richText("Artist", album.artist)
   .date("Released", album.release_date)
   .heading1("Tracklist")
-
-// Loop through the tracks to add numbered list items
-album.tracks.forEach((track) => {
-  // num() is an alias function for numberedListItem(). Use number() for number properties
-  builder.num(track)
-}
-
-// Add the album art section, then build the final page object
-const result = builder
+  .loop("numbered_list_item", album.tracks) // The loop() method can create blocks from an array
   .heading1("Album Art")
   .image(album.cover)
   .build() // Call build() at the end of the chain
 
-// We called parentDb(), so result.content is a page object we can use
+// We called parentDb(), so builder.content is a page object we can use
 // to create a new page in our target database
-const response = await notion.pages.create(result.content)
+const response = await notion.pages.create(builder.content)
 ```
 
 The result:
@@ -481,25 +473,21 @@ const builder = createNotion()
     .richText("Artist", album.artist)
     .date("Released", album.release_date)
     .heading1("Tracklist")
-    .startParent("table", {
+    .startParent("table", { // startParent() creates a block and chains further blocks as its children
         has_column_header: true,
         rows: [["No", "Title", "Writer(s)", "Parody of", "Length"]],
-    });
-
-// Loop the tracks array as before, but now create table_row blocks
-// Note how we use startParent() to create the table block above.
-// This is because table_row blocks must be in the children array of a table block.
-album.tracks.forEach((track) => {
-    builder.tableRow([track["No."], track.Title, track["Writer(s)"], track["Parody of"], track.Length]);
-});
-
-const result = builder
+    })
+    .loop((builder, track) => { // loop() can accept a callback for custom handling instead of a block type
+        builder.tableRow([
+            track["No."], track.Title, track["Writer(s)"], track["Parody of"], track.Length
+        ])
+    }, album.tracks)
     .endParent() // endParent() to break out of the table block's children array
     .heading1("Album Art")
     .image(album.cover)
     .build();
 
-const response = notion.pages.create(result.content);
+const response = notion.pages.create(builder.content);
 ```
 
 </details>
