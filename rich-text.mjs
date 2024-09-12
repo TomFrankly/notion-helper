@@ -102,6 +102,10 @@ export function enforceRichText(content) {
         return buildRichTextObj(content);
     }
 
+    if (typeof content === "number") {
+        return buildRichTextObj(content.toString())
+    }
+
     if (typeof content === "object") {
         return [enforceRichTextObject(content)];
     }
