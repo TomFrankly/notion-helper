@@ -1,7 +1,4 @@
-import {
-    buildRichTextObj,
-    enforceRichText
-} from "./rich-text.mjs";
+import { buildRichTextObj, enforceRichText } from "./rich-text.mjs";
 import { setIcon } from "./emoji-and-files.mjs";
 import {
     isValidURL,
@@ -1016,3 +1013,236 @@ export const block = {
         },
     },
 };
+
+/*
+ * Quality-of-life functions for blocks:
+ */
+
+/**
+ * Creates a bookmark block.
+ * @param {string|Object} options - A string representing the URL, or an options object.
+ * @see block.bookmark for full documentation
+ * @returns {Object} a bookmark block.
+ */
+export function bookmark(options) {
+    return block.bookmark.createBlock(options);
+}
+
+/**
+ * Creates a bulleted list item block.
+ * @param {string|string[]|Object} options - A string, an array of strings, or an options object representing the list item content.
+ * @see block.bulleted_list_item for full documentation
+ * @returns {Object} A bulleted list item block.
+ */
+export function bulletedListItem(options) {
+    return block.bulleted_list_item.createBlock(options);
+}
+
+/**
+ * Shorthand alias for bulletedListItem(). Creates a bulleted list item block.
+ * @param {string|string[]|Object} options - A string, an array of strings, or an options object representing the list item content.
+ * @see block.bulleted_list_item for full documentation
+ * @returns {Object} A bulleted list item block.
+ */
+export function bullet(options) {
+    return bulletedListItem(options)
+}
+
+/**
+ * Creates a callout block.
+ * @param {string|string[]|Object} options - A string, an array of strings, or an options object representing the callout content.
+ * @see block.callout for full documentation
+ * @returns {Object} A callout block.
+ */
+export function callout(options) {
+    return block.callout.createBlock(options);
+}
+
+/**
+ * Creates a code block.
+ * @param {string|Object} options - A string representing the code content, or an options object.
+ * @see block.code for full documentation
+ * @returns {Object} A code block.
+ */
+export function code(options) {
+    return block.code.createBlock(options);
+}
+
+/**
+ * Creates a divider block.
+ * @see block.divider for full documentation
+ * @returns {Object} A divider block.
+ */
+export function divider() {
+    return block.divider.createBlock();
+}
+
+/**
+ * Creates an embed block.
+ * @param {string|Object} options - A string representing the URL to be embedded, or an options object.
+ * @see block.embed for full documentation
+ * @returns {Object} An embed block.
+ */
+export function embed(options) {
+    return block.embed.createBlock(options);
+}
+
+/**
+ * Creates a file block.
+ * @param {string|Object} options - A string representing the file URL, or an options object.
+ * @see block.file for full documentation
+ * @returns {Object|null} A file block or null if the URL is invalid.
+ */
+export function file(options) {
+    return block.file.createBlock(options);
+}
+
+/**
+ * Creates a heading_1 block.
+ * @param {string|string[]|Object} options - A string, an array of strings, or an options object representing the heading content.
+ * @see block.heading_1 for full documentation
+ * @returns {Object} A heading_1 block.
+ */
+export function heading1(options) {
+    return block.heading_1.createBlock(options);
+}
+
+/**
+ * Creates a heading_2 block.
+ * @param {string|string[]|Object} options - A string, an array of strings, or an options object representing the heading content.
+ * @see block.heading_2 for full documentation
+ * @returns {Object} A heading_2 block.
+ */
+export function heading2(options) {
+    return block.heading_2.createBlock(options);
+}
+
+/**
+ * Creates a heading_3 block.
+ * @param {string|string[]|Object} options - A string, an array of strings, or an options object representing the heading content.
+ * @see block.heading_3 for full documentation
+ * @returns {Object} A heading_3 block.
+ */
+export function heading3(options) {
+    return block.heading_3.createBlock(options);
+}
+
+/**
+ * Creates an image block.
+ * @param {string|Object} options - A string representing the image URL, or an options object.
+ * @see block.image for full documentation
+ * @returns {Object|null} An image block or null if the URL is invalid.
+ */
+export function image(options) {
+    return block.image.createBlock(options);
+}
+
+/**
+ * Creates a numbered list item block.
+ * @param {string|string[]|Object} options - A string, an array of strings, or an options object representing the list item content.
+ * @see block.numbered_list_item for full documentation
+ * @returns {Object} A numbered list item block.
+ */
+export function numberedListItem(options) {
+    return block.numbered_list_item.createBlock(options);
+}
+
+/**
+ * Shorthand alias function for numberedListItem(). Creates a numbered list item block.
+ * @param {string|string[]|Object} options - A string, an array of strings, or an options object representing the list item content.
+ * @see block.numbered_list_item for full documentation
+ * @returns {Object} A numbered list item block.
+ */
+export function num(options) {
+    return numberedListItem(options);
+}
+
+/**
+ * Creates a paragraph block.
+ * @param {string|string[]|Object} options - A string, an array of strings, or an options object representing the paragraph content.
+ * @see block.paragraph for full documentation
+ * @returns {Object} A paragraph block.
+ */
+export function paragraph(options) {
+    return block.paragraph.createBlock(options);
+}
+
+/**
+ * Creates a PDF block.
+ * @param {string|Object} options - A string representing the PDF URL, or an options object.
+ * @see block.pdf for full documentation
+ * @returns {Object|null} A PDF block or null if the URL is invalid.
+ */
+export function pdf(options) {
+    return block.pdf.createBlock(options);
+}
+
+/**
+ * Creates a quote block.
+ * @param {string|string[]|Object} options - A string, an array of strings, or an options object representing the quote content.
+ * @see block.quote for full documentation
+ * @returns {Object} A quote block.
+ */
+export function quote(options) {
+    return block.quote.createBlock(options);
+}
+
+/**
+ * Creates a table block.
+ * @param {Object} options - Options for creating the table.
+ * @see block.table for full documentation
+ * @returns {Object} A table block.
+ */
+export function table(options) {
+    return block.table.createBlock(options);
+}
+
+/**
+ * Creates a table row block.
+ * @param {Array<string|Array<Object>>} cells - An array of cell contents.
+ * @see block.table_row for full documentation
+ * @returns {Object} A table row block.
+ */
+export function tableRow(cells) {
+    return block.table_row.createBlock(cells);
+}
+
+/**
+ * Creates a table of contents block.
+ * @param {string|Object} [options="default"] - A string representing the color, or an options object.
+ * @see block.table_of_contents for full documentation
+ * @returns {Object} A table of contents block.
+ */
+export function tableOfContents(options) {
+    return block.table_of_contents.createBlock(options);
+}
+
+/**
+ * Creates a to-do list block.
+ * @param {string|string[]|Object} options - A string, an array of strings, or an options object representing the to-do content.
+ * @see block.to_do for full documentation
+ * @returns {Object} A to-do list block.
+ */
+export function toDo(options) {
+    return block.to_do.createBlock(options);
+}
+
+/**
+ * Creates a toggle block.
+ * @param {string|string[]|Object} options - A string, an array of strings, or an options object representing the toggle content.
+ * @see block.toggle for full documentation
+ * @returns {Object} A toggle block.
+ */
+export function toggle(options) {
+    return block.toggle.createBlock(options);
+}
+
+/**
+ * Creates a video block.
+ * @param {string|Object} options - A string representing the video URL, or an options object.
+ * @see block.video for full documentation
+ * @returns {Object|null} A video block or null if the URL is invalid.
+ */
+export function video(options) {
+    return block.video.createBlock(options);
+}
