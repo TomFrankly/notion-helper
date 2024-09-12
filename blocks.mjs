@@ -944,7 +944,7 @@ export const block = {
             type: "table_row",
             table_row: {
                 cells: cells.map((cell) =>
-                    typeof cell === "string" ? enforceRichText(cell) : cell
+                    typeof cell === "string" || typeof cell === "number" ? enforceRichText(cell) : cell
                 ),
             },
         }),
