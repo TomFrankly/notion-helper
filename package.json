@@ -17,5 +17,8 @@
     "type": "git",
     "url": "https://github.com/TomFrankly/notion-helper"
   },
+  "scripts": {
+    "docs": "documentation build *.mjs -f html --github -o docs"
+  },
   "homepage": "https://github.com/TomFrankly/notion-helper"
 }

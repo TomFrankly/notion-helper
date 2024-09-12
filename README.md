@@ -364,16 +364,16 @@ Each property represents a database property type. All **writeable** properties 
 - Status
 - URL
 
-Each property's `createProp()` takes an argument as specified by the [Page Properties](https://developers.notion.com/reference/page-property-values) specification of the Notion API. (E.g. Checkbox props take a `boolean`, Rich Text props take an array of Rich Text objects, Date props take an [ISO-8601](https://en.wikipedia.org/wiki/ISO_8601) date-time string, etc.)
+Each property's `setProp()` takes an argument as specified by the [Page Properties](https://developers.notion.com/reference/page-property-values) specification of the Notion API. (E.g. Checkbox props take a `boolean`, Rich Text props take an array of Rich Text objects, Date props take an [ISO-8601](https://en.wikipedia.org/wiki/ISO_8601) date-time string, etc.)
 
 ```js
 
 const page = {
     /* parent, icon, cover */
     properties: {
-        Name: NotionHelper.page_props.title.createProp(buildRichTextObj("Flylighter - Notion Web Clipper")),
-        Capture Date: NotionHelper.page_props.date.createProp(new Date().toISOString())
-        URL: NotionHelper.page_props.url.createProp("https://flylighter.com/")
+        Name: NotionHelper.page_props.title.setProp(buildRichTextObj("Flylighter - Notion Web Clipper")),
+        Capture Date: NotionHelper.page_props.date.setProp(new Date().toISOString())
+        URL: NotionHelper.page_props.url.setProp("https://flylighter.com/")
     }
 }
 

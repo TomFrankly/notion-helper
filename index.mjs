@@ -1,7 +1,7 @@
 import { buildRichTextObj } from "./rich-text.mjs";
 import {
-    makeParagraphBlocks,
     block,
+    makeParagraphBlocks,
     bookmark,
     bulletedListItem,
     bullet,
