@@ -1,7 +1,7 @@
 {
   "name": "notion-helper",
   "description": "A library of functions for working more easily with the Notion API",
-  "version": "1.1.6",
+  "version": "1.1.7",
   "type": "module",
   "main": "index.mjs",
   "devDependencies": {},

@@ -1,12 +1,14 @@
-import { buildRichTextObj } from "./rich-text.mjs";
-import CONSTANTS from "./constants.mjs";
+import {
+    buildRichTextObj,
+    enforceRichText
+} from "./rich-text.mjs";
 import { setIcon } from "./emoji-and-files.mjs";
 import {
     isValidURL,
     validateImageURL,
     validatePDFURL,
     validateVideoURL,
-    enforceStringLength
+    enforceStringLength,
 } from "./utils.mjs";
 
 /*
@@ -18,28 +20,36 @@ import {
 
 /**
  * Simple function to create standard Paragraph blocks from an array of strings without any special formatting. Each Paragraph block will contain a single Rich Text Object.
- * 
+ *
  * @param {Array<string>} strings - an array of strings.
  * @returns {Array<Object>} - array of Paragraph blocks.
  */
 export function makeParagraphBlocks(strings) {
     if (!Array.isArray(strings) || strings.length < 1) {
-        console.error(`Invalid argument passed to makeParagraphs(). Expected a non-empty array.`)
-        console.dir(strings)
-        throw new Error(`Invalid argument: Expected a non-empty array.`)
+        console.error(
+            `Invalid argument passed to makeParagraphs(). Expected a non-empty array.`
+        );
+        console.dir(strings);
+        throw new Error(`Invalid argument: Expected a non-empty array.`);
     }
 
     /* Remove non-string elements */
-    const validStrings = strings.filter((string) => typeof string === "string")
-    
+    const validStrings = strings.filter((string) => typeof string === "string");
+
     /* Check each string's length, get a new array of strings */
-    const lengthCheckedStrings = validStrings.flatMap((string) => enforceStringLength(string))
+    const lengthCheckedStrings = validStrings.flatMap((string) =>
+        enforceStringLength(string)
+    );
 
     /* Turn each string into an array with a single Rich Text Object */
-    const richTextObjects = lengthCheckedStrings.map((string) => buildRichTextObj(string))
+    const richTextObjects = lengthCheckedStrings.map((string) =>
+        buildRichTextObj(string)
+    );
 
     /* Create a Paragraph block for each Rich Text Object */
-    return richTextObjects.map((richText) => block.paragraph.createBlock({rtArray: richText}))
+    return richTextObjects.map((richText) =>
+        block.paragraph.createBlock({ content: richText })
+    );
 }
 
 /*
@@ -54,24 +64,47 @@ export function makeParagraphBlocks(strings) {
 export const block = {
     /**
      * Methods to create bookmark blocks.
-     * Does not check for URL validity.
      *
      * @property {boolean} supports_children - Indicates if the block supports child blocks.
      * @method createBlock
-     * @param {Object} options
+     * @param {string|Object} options - A string representing the URL, or an options object.
      * @param {string} options.url - The URL to be bookmarked.
-     * @param {Array} [options.rtArray=[]] - An array of rich text items for the caption.
-     * @returns {Object} A bookmark block object.
+     * @param {string|string[]|Array<Object>} [options.caption=[]] - The caption as a string, an array of strings, or an array of rich text objects.
+     * @returns {Object} A bookmark block object compatible with Notion's API.
+     * @example
+     * // Use with just a URL
+     * const simpleBookmark = block.bookmark.createBlock("https://www.flylighter.com");
+     *
+     * // Use with options object
+     * const complexBookmark = block.bookmark.createBlock({
+     *   url: "https://www.flylighter.com",
+     *   caption: "Flylighter is a super-rad web clipper for Notion."
+     * });
+     *
+     * // Use with options object and array of strings for caption
+     * const multiLineBookmark = block.bookmark.createBlock({
+     *   url: "https://www.flylighter.com",
+     *   caption: ["Flylighter is a web clipper for Notion...", "...and Obsidian, too."]
+     * });
      */
     bookmark: {
         supports_children: false,
-        createBlock: ({ url, rtArray = [] }) => ({
-            type: "bookmark",
-            bookmark: {
-                caption: rtArray,
-                url: url,
-            },
-        }),
+        createBlock: (options) => {
+            let url, caption;
+            if (typeof options === "string") {
+                url = options;
+                caption = [];
+            } else {
+                ({ url, caption = [] } = options);
+            }
+            return {
+                type: "bookmark",
+                bookmark: {
+                    url: url,
+                    caption: enforceRichText(caption),
+                },
+            };
+        },
     },
 
     /**
@@ -79,22 +112,47 @@ export const block = {
      *
      * @property {boolean} supports_children - Indicates if the block supports child blocks.
      * @method createBlock
-     * @param {Object} options
-     * @param {Array} [options.rtArray=[]] - An array of rich text items for the content.
-     * @param {Array} [options.children=[]] - An array of child block objects.
+     * @param {string|string[]|Object} options - A string, an array of strings, or an options object representing the list item content.
+     * @param {string|string[]|Array<Object>} [options.content=[]] - The content as a string, an array of strings, or an array of rich text objects.
+     * @param {Array<Object>} [options.children=[]] - An array of child block objects.
      * @param {string} [options.color="default"] - Color for the text.
-     * @returns {Object} A bulleted list item block object.
+     * @returns {Object} A bulleted list item block object compatible with Notion's API.
+     * @example
+     * // Use with a string
+     * const simpleItem = block.bulleted_list_item.createBlock("Simple list item");
+     *
+     * // Use with an array of strings
+     * const multiLineItem = block.bulleted_list_item.createBlock(["Line 1", "Line 2"]);
+     *
+     * // Use with options object
+     * const complexItem = block.bulleted_list_item.createBlock({
+     *   content: "Complex item",
+     *   color: "red",
+     *   children: [
+     *     // Child blocks would go here
+     *   ]
+     * });
      */
     bulleted_list_item: {
         supports_children: true,
-        createBlock: ({ rtArray = [], children = [], color = "default" }) => ({
-            type: "bulleted_list_item",
-            bulleted_list_item: {
-                rich_text: rtArray,
-                color: color,
-                children: children,
-            },
-        }),
+        createBlock: (options) => {
+            let content, children, color;
+            if (typeof options === "string" || Array.isArray(options)) {
+                content = options;
+                children = [];
+                color = "default";
+            } else {
+                ({ content = [], children = [], color = "default" } = options);
+            }
+            return {
+                type: "bulleted_list_item",
+                bulleted_list_item: {
+                    rich_text: enforceRichText(content),
+                    color: color,
+                    ...(children.length > 0 && { children }),
+                },
+            };
+        },
     },
 
     /**
@@ -102,29 +160,53 @@ export const block = {
      *
      * @property {boolean} supports_children - Indicates if the block supports child blocks.
      * @method createBlock
-     * @param {Object} options
-     * @param {Array} [options.rtArray=[]] - An array of rich text items for the callout.
+     * @param {string|string[]|Object} options - A string, an array of strings, or an options object representing the callout content.
+     * @param {string|string[]|Array<Object>} [options.content=[]] - The content as a string, an array of strings, or an array of rich text objects.
      * @param {string} [options.icon=""] - An optional icon value (URL for "external" or emoji character for "emoji").
-     * @param {Array} [options.children=[]] - An array of child block objects.
-     * @param {string} [options.color="default"] - Color for the callout text.
-     * @returns {Object} A callout block object.
+     * @param {Array<Object>} [options.children=[]] - An array of child block objects.
+     * @param {string} [options.color="default"] - Color for the callout background.
+     * @returns {Object} A callout block object compatible with Notion's API.
+     * @example
+     * // Use with a string
+     * const simpleCallout = block.callout.createBlock("I though I told you never to come in here, McFly!");
+     *
+     * // Use with options object
+     * const complexCallout = block.callout.createBlock({
+     *   content: "Now make like a tree and get outta here.",
+     *   icon: "💡",
+     *   color: "blue_background",
+     *   children: [
+     *     // Child blocks would go here
+     *   ]
+     * });
      */
     callout: {
         supports_children: true,
-        createBlock: ({
-            rtArray = [],
-            icon = "",
-            children = [],
-            color = "default",
-        }) => ({
-            type: "callout",
-            callout: {
-                rich_text: rtArray,
-                color: color,
-                icon: setIcon(icon),
-                children: children,
-            },
-        }),
+        createBlock: (options) => {
+            let content, icon, children, color;
+            if (typeof options === "string" || Array.isArray(options)) {
+                content = options;
+                icon = "";
+                children = [];
+                color = "default";
+            } else {
+                ({
+                    content = [],
+                    icon = "",
+                    children = [],
+                    color = "default",
+                } = options);
+            }
+            return {
+                type: "callout",
+                callout: {
+                    rich_text: enforceRichText(content),
+                    icon: setIcon(icon),
+                    color: color,
+                    ...(children.length > 0 && { children }),
+                },
+            };
+        },
     },
 
     /**
@@ -132,26 +214,46 @@ export const block = {
      *
      * @property {boolean} supports_children - Indicates if the block supports child blocks (not supported for code).
      * @method createBlock
-     * @param {Object} options
-     * @param {Array} [options.rtArray=[]] - An array of rich text items for the code content.
-     * @param {Array} [options.caption=[]] - An array of rich text items for the caption.
+     * @param {string|Object} options - A string representing the code content, or an options object.
+     * @param {string|string[]|Array<Object>} [options.content=[]] - The code content as a string, an array of strings, or an array of rich text objects.
+     * @param {string|string[]|Array<Object>} [options.caption=[]] - The caption as a string, an array of strings, or an array of rich text objects.
      * @param {string} [options.language="plain text"] - Programming language of the code block.
-     * @returns {Object} A code block object.
+     * @returns {Object} A code block object compatible with Notion's API.
+     * @example
+     * // Use with a string
+     * const simpleCode = block.code.createBlock("console.log('Give me all the bacon and eggs you have.');");
+     *
+     * // Use with options object
+     * const complexCode = block.code.createBlock({
+     *   content: "const name = "Monkey D. Luffy"\n    console.log(`My name is ${name} and I will be king of the pirates!`)",
+     *   language: "JavaScript",
+     *   caption: "A simple JavaScript greeting function"
+     * });
      */
     code: {
         supports_children: false,
-        createBlock: ({
-            rtArray = [],
-            caption = [],
-            language = "plain text",
-        }) => ({
-            type: "code",
-            code: {
-                caption: caption,
-                rich_text: rtArray,
-                language: language,
-            },
-        }),
+        createBlock: (options) => {
+            let content, caption, language;
+            if (typeof options === "string") {
+                content = options;
+                caption = [];
+                language = "plain text";
+            } else {
+                ({
+                    content = [],
+                    caption = [],
+                    language = "plain text",
+                } = options);
+            }
+            return {
+                type: "code",
+                code: {
+                    rich_text: enforceRichText(content),
+                    caption: enforceRichText(caption),
+                    language: language,
+                },
+            };
+        },
     },
 
     /**
@@ -159,7 +261,9 @@ export const block = {
      *
      * @property {boolean} supports_children - Indicates if the block supports child blocks (not supported for dividers).
      * @method createBlock
-     * @returns {Object} A divider block object.
+     * @returns {Object} A divider block object compatible with Notion's API.
+     * @example
+     * const divider = block.divider.createBlock();
      */
     divider: {
         supports_children: false,
@@ -174,37 +278,63 @@ export const block = {
      *
      * @property {boolean} supports_children - Indicates if the block supports child blocks.
      * @method createBlock
-     * @param {Object} options
+     * @param {string|Object} options - A string representing the URL to be embedded, or an options object.
      * @param {string} options.url - The URL to be embedded.
+     * @returns {Object} An embed block object compatible with Notion's API.
+     * @example
+     * // Use with a string
+     * const simpleEmbed = block.embed.createBlock("https://www.youtube.com/watch?v=ec5m6t77eYM");
      *
+     * // Use with options object
+     * const complexEmbed = block.embed.createBlock({
+     *   url: "https://www.youtube.com/watch?v=ec5m6t77eYM"
+     * });
      */
     embed: {
         supports_children: false,
-        createBlock: ({ url }) => ({
-            type: "embed",
-            embed: {
-                url: url,
-            },
-        }),
+        createBlock: (options) => {
+            const url = typeof options === "string" ? options : options.url;
+            return {
+                type: "embed",
+                embed: {
+                    url: url,
+                },
+            };
+        },
     },
 
     /**
      * Methods to create file blocks.
      *
-     * Returns null on invalid URL; remove null from the final children array.
-     *
      * @property {boolean} supports_children - Indicates if the block supports child blocks (not supported for files).
      * @method createBlock
-     * @param {Object} options
+     * @param {string|Object} options - A string representing the file URL, or an options object.
      * @param {string} options.url - The URL for the file.
-     * @param {string} options.name - The name of the file.
-     * @param {Array} [options.caption=[]] - An array of rich text items for the caption.
-     * @returns {Object|null} A file block object or null if the URL is invalid.
+     * @param {string} [options.name] - The name of the file.
+     * @param {string|string[]|Array<Object>} [options.caption=[]] - The caption as a string, an array of strings, or an array of rich text objects.
+     * @returns {Object|null} A file block object compatible with Notion's API, or null if the URL is invalid.
+     * @example
+     * // Use with a string
+     * const simpleFile = block.file.createBlock("https://collegeinfogeek.com/wp-content/uploads/2015/01/10steps-reddit.pdf");
+     *
+     * // Use with options object
+     * const complexFile = block.file.createBlock({
+     *   url: "https://collegeinfogeek.com/wp-content/uploads/2015/01/10steps-reddit.pdf",
+     *   name: "10 Steps to Earning Awesome Grades (preview)",
+     *   caption: "The Reddit preview of the 10 Steps to Earning Awesome Grades book."
+     * });
      */
     file: {
-        // Returns null on invalid URL. Remove null from final children array.
         supports_children: false,
-        createBlock: ({ url, name, caption = [] }) => {
+        createBlock: (options) => {
+            let url, name, caption;
+            if (typeof options === "string") {
+                url = options;
+                name = "";
+                caption = [];
+            } else {
+                ({ url, name = "", caption = [] } = options);
+            }
             const isValid = isValidURL(url);
             return isValid
                 ? {
@@ -214,7 +344,7 @@ export const block = {
                           external: {
                               url: url,
                           },
-                          caption: caption,
+                          caption: enforceRichText(caption),
                           name: name && name !== "" ? name : undefined,
                       },
                   }
@@ -229,29 +359,53 @@ export const block = {
      *
      * @property {boolean} supports_children - Indicates if the block supports child blocks.
      * @method createBlock
-     * @param {Object} options
-     * @param {Array} [options.rtArray=[]] - An array of rich text items for the heading text.
+     * @param {string|string[]|Object} options - A string, an array of strings, or an options object representing the heading content.
+     * @param {string|string[]|Array<Object>} [options.content=[]] - The content as a string, an array of strings, or an array of rich text objects.
      * @param {string} [options.color="default"] - Color for the heading text.
      * @param {boolean} [options.is_toggleable=false] - Whether the heading is toggleable.
-     * @param {Array} [options.children=[]] - An array of child block objects.
-     * @returns {Object} A heading block object.
+     * @param {Array<Object>} [options.children=[]] - An array of child block objects.
+     * @returns {Object} A heading_1 block object compatible with Notion's API.
+     * @example
+     * // Use with a string
+     * const simpleHeading = block.heading_1.createBlock("Simple Heading");
+     *
+     * // Use with options object
+     * const complexHeading = block.heading_1.createBlock({
+     *   content: "Complex Heading",
+     *   color: "red",
+     *   is_toggleable: true,
+     *   children: [
+     *     // Child blocks would go here
+     *   ]
+     * });
      */
     heading_1: {
         supports_children: true,
-        createBlock: ({
-            rtArray = [],
-            color = "default",
-            is_toggleable = false,
-            children = [],
-        }) => ({
-            type: "heading_1",
-            heading_1: {
-                rich_text: rtArray,
-                color: color,
-                is_toggleable: is_toggleable,
-                children: children,
-            },
-        }),
+        createBlock: (options) => {
+            let content, color, is_toggleable, children;
+            if (typeof options === "string" || Array.isArray(options)) {
+                content = options;
+                color = "default";
+                is_toggleable = false;
+                children = [];
+            } else {
+                ({
+                    content = [],
+                    color = "default",
+                    is_toggleable = false,
+                    children = [],
+                } = options);
+            }
+            return {
+                type: "heading_1",
+                heading_1: {
+                    rich_text: enforceRichText(content),
+                    color: color,
+                    is_toggleable: is_toggleable,
+                    ...(children.length > 0 && { children }),
+                },
+            };
+        },
     },
 
     /**
@@ -261,29 +415,53 @@ export const block = {
      *
      * @property {boolean} supports_children - Indicates if the block supports child blocks.
      * @method createBlock
-     * @param {Object} options
-     * @param {Array} [options.rtArray=[]] - An array of rich text items for the heading text.
+     * @param {string|string[]|Object} options - A string, an array of strings, or an options object representing the heading content.
+     * @param {string|string[]|Array<Object>} [options.content=[]] - The content as a string, an array of strings, or an array of rich text objects.
      * @param {string} [options.color="default"] - Color for the heading text.
      * @param {boolean} [options.is_toggleable=false] - Whether the heading is toggleable.
-     * @param {Array} [options.children=[]] - An array of child block objects.
-     * @returns {Object} A heading block object.
+     * @param {Array<Object>} [options.children=[]] - An array of child block objects.
+     * @returns {Object} A heading_2 block object compatible with Notion's API.
+     * @example
+     * // Use with a string
+     * const simpleHeading = block.heading_2.createBlock("Simple Heading");
+     *
+     * // Use with options object
+     * const complexHeading = block.heading_2.createBlock({
+     *   content: "Complex Heading",
+     *   color: "red",
+     *   is_toggleable: true,
+     *   children: [
+     *     // Child blocks would go here
+     *   ]
+     * });
      */
     heading_2: {
         supports_children: true,
-        createBlock: ({
-            rtArray = [],
-            color = "default",
-            is_toggleable = false,
-            children = [],
-        }) => ({
-            type: "heading_2",
-            heading_2: {
-                rich_text: rtArray,
-                color: color,
-                is_toggleable: is_toggleable,
-                children: children,
-            },
-        }),
+        createBlock: (options) => {
+            let content, color, is_toggleable, children;
+            if (typeof options === "string" || Array.isArray(options)) {
+                content = options;
+                color = "default";
+                is_toggleable = false;
+                children = [];
+            } else {
+                ({
+                    content = [],
+                    color = "default",
+                    is_toggleable = false,
+                    children = [],
+                } = options);
+            }
+            return {
+                type: "heading_2",
+                heading_2: {
+                    rich_text: enforceRichText(content),
+                    color: color,
+                    is_toggleable: is_toggleable,
+                    ...(children.length > 0 && { children }),
+                },
+            };
+        },
     },
 
     /**
@@ -293,45 +471,84 @@ export const block = {
      *
      * @property {boolean} supports_children - Indicates if the block supports child blocks.
      * @method createBlock
-     * @param {Object} options
-     * @param {Array} [options.rtArray=[]] - An array of rich text items for the heading text.
+     * @param {string|string[]|Object} options - A string, an array of strings, or an options object representing the heading content.
+     * @param {string|string[]|Array<Object>} [options.content=[]] - The content as a string, an array of strings, or an array of rich text objects.
      * @param {string} [options.color="default"] - Color for the heading text.
      * @param {boolean} [options.is_toggleable=false] - Whether the heading is toggleable.
-     * @param {Array} [options.children=[]] - An array of child block objects.
-     * @returns {Object} A heading block object.
+     * @param {Array<Object>} [options.children=[]] - An array of child block objects.
+     * @returns {Object} A heading_3 block object compatible with Notion's API.
+     * @example
+     * // Use with a string
+     * const simpleHeading = block.heading_3.createBlock("Simple Heading");
+     *
+     * // Use with options object
+     * const complexHeading = block.heading_3.createBlock({
+     *   content: "Complex Heading",
+     *   color: "red",
+     *   is_toggleable: true,
+     *   children: [
+     *     // Child blocks would go here
+     *   ]
+     * });
      */
     heading_3: {
         supports_children: true,
-        createBlock: ({
-            rtArray = [],
-            color = "default",
-            is_toggleable = false,
-            children = [],
-        }) => ({
-            type: "heading_3",
-            heading_3: {
-                rich_text: rtArray,
-                color: color,
-                is_toggleable: is_toggleable,
-                children: children,
-            },
-        }),
+        createBlock: (options) => {
+            let content, color, is_toggleable, children;
+            if (typeof options === "string" || Array.isArray(options)) {
+                content = options;
+                color = "default";
+                is_toggleable = false;
+                children = [];
+            } else {
+                ({
+                    content = [],
+                    color = "default",
+                    is_toggleable = false,
+                    children = [],
+                } = options);
+            }
+            return {
+                type: "heading_3",
+                heading_3: {
+                    rich_text: enforceRichText(content),
+                    color: color,
+                    is_toggleable: is_toggleable,
+                    ...(children.length > 0 && { children }),
+                },
+            };
+        },
     },
 
     /**
      * Methods to create image blocks.
      *
-     * Returns null on invalid image URL; remove null from the final children array.
-     *
      * @property {boolean} supports_children - Indicates if the block supports child blocks (not supported for images).
      * @method createBlock
-     * @param {Object} options
+     * @param {string|Object} options - A string representing the image URL, or an options object.
      * @param {string} options.url - The URL for the image.
-     * @returns {Object|null} An image block object or null if the URL is invalid.
+     * @param {string|string[]|Array<Object>} [options.caption=[]] - The caption as a string, an array of strings, or an array of rich text objects.
+     * @returns {Object|null} An image block object compatible with Notion's API, or null if the URL is invalid.
+     * @example
+     * // Use with a string
+     * const simpleImage = block.image.createBlock("https://i.imgur.com/5vSShIw.jpeg");
+     *
+     * // Use with options object
+     * const complexImage = block.image.createBlock({
+     *   url: "https://i.imgur.com/5vSShIw.jpeg",
+     *   caption: "A beautiful landscape"
+     * });
      */
     image: {
         supports_children: false,
-        createBlock: ({ url }) => {
+        createBlock: (options) => {
+            let url, caption;
+            if (typeof options === "string") {
+                url = options;
+                caption = [];
+            } else {
+                ({ url, caption = [] } = options);
+            }
             const isValidImage = validateImageURL(url);
             return isValidImage
                 ? {
@@ -341,6 +558,7 @@ export const block = {
                           external: {
                               url: url,
                           },
+                          caption: enforceRichText(caption),
                       },
                   }
                 : null;
@@ -352,22 +570,47 @@ export const block = {
      *
      * @property {boolean} supports_children - Indicates if the block supports child blocks.
      * @method createBlock
-     * @param {Object} options
-     * @param {Array} [options.rtArray=[]] - An array of rich text items for the content.
-     * @param {Array} [options.children=[]] - An array of child block objects.
+     * @param {string|string[]|Object} options - A string, an array of strings, or an options object representing the list item content.
+     * @param {string|string[]|Array<Object>} [options.content=[]] - The content as a string, an array of strings, or an array of rich text objects.
+     * @param {Array<Object>} [options.children=[]] - An array of child block objects.
      * @param {string} [options.color="default"] - Color for the text.
-     * @returns {Object} A numbered list item block object.
+     * @returns {Object} A numbered list item block object compatible with Notion's API.
+     * @example
+     * // Use with a string
+     * const simpleItem = block.numbered_list_item.createBlock("Simple list item");
+     *
+     * // Use with an array of strings
+     * const multiLineItem = block.numbered_list_item.createBlock(["Line 1", "Line 2"]);
+     *
+     * // Use with options object
+     * const complexItem = block.numbered_list_item.createBlock({
+     *   content: "Complex item",
+     *   color: "red",
+     *   children: [
+     *     // Child blocks would go here
+     *   ]
+     * });
      */
     numbered_list_item: {
         supports_children: true,
-        createBlock: ({ rtArray = [], children = [], color = "default" }) => ({
-            type: "numbered_list_item",
-            numbered_list_item: {
-                rich_text: rtArray,
-                color: color,
-                children: children,
-            },
-        }),
+        createBlock: (options) => {
+            let content, children, color;
+            if (typeof options === "string" || Array.isArray(options)) {
+                content = options;
+                children = [];
+                color = "default";
+            } else {
+                ({ content = [], children = [], color = "default" } = options);
+            }
+            return {
+                type: "numbered_list_item",
+                numbered_list_item: {
+                    rich_text: enforceRichText(content),
+                    color: color,
+                    ...(children.length > 0 && { children }),
+                },
+            };
+        },
     },
 
     /**
@@ -375,40 +618,80 @@ export const block = {
      *
      * @property {boolean} supports_children - Indicates if the block supports child blocks.
      * @method createBlock
-     * @param {Object} options
-     * @param {Array} [options.rtArray=[]] - An array of rich text items for the content.
-     * @param {Array} [options.children=[]] - An array of child block objects.
+     * @param {string|string[]|Object} options - A string, an array of strings, or an options object representing the paragraph content.
+     * @param {string|string[]|Array<Object>} [options.content=[]] - The content as a string, an array of strings, or an array of rich text objects.
+     * @param {Array<Object>} [options.children=[]] - An array of child block objects.
      * @param {string} [options.color="default"] - Color for the text.
-     * @returns {Object} A paragraph block object.
+     * @returns {Object} A paragraph block object compatible with Notion's API.
+     * @example
+     * // Direct use with a string
+     * const paragraphBlock = block.paragraph.createBlock("Hello, World!");
+     *
+     * // Direct use with an array of strings
+     * const multiLineParagraph = block.paragraph.createBlock(["I'm a line", "I'm also a line!"]);
+     *
+     * // Usage with options object
+     * const complexParagraph = block.paragraph.createBlock({
+     *   content: "Complex paragraph",
+     *   color: "red",
+     *   children: [
+     *     // Child blocks would go here
+     *   ]
+     * });
      */
     paragraph: {
         supports_children: true,
-        createBlock: ({ rtArray = [], children = [], color = "default" }) => ({
-            type: "paragraph",
-            paragraph: {
-                rich_text: rtArray,
-                color: color,
-                children: children,
-            },
-        }),
+        createBlock: (options) => {
+            let content, children, color;
+            if (typeof options === "string" || Array.isArray(options)) {
+                content = options;
+                children = [];
+                color = "default";
+            } else {
+                ({ content = [], children = [], color = "default" } = options);
+            }
+            return {
+                type: "paragraph",
+                paragraph: {
+                    rich_text: enforceRichText(content),
+                    color: color,
+                    ...(children.length > 0 && { children }),
+                },
+            };
+        },
     },
 
     /**
      * Methods to create PDF blocks.
      *
-     * Returns null on invalid PDF URL; remove null from the final children array.
-     *
      * @property {boolean} supports_children - Indicates if the block supports child blocks (not supported for PDFs).
      * @method createBlock
-     * @param {Object} options
+     * @param {string|Object} options - A string representing the PDF URL, or an options object.
      * @param {string} options.url - The URL for the PDF.
-     * @returns {Object|null} A PDF block object or null if the URL is invalid.
+     * @param {string|string[]|Array<Object>} [options.caption=[]] - The caption as a string, an array of strings, or an array of rich text objects.
+     * @returns {Object|null} A PDF block object compatible with Notion's API, or null if the URL is invalid.
+     * @example
+     * // Use with a string
+     * const simplePDF = block.pdf.createBlock("https://collegeinfogeek.com/wp-content/uploads/2015/01/10steps-reddit.pdf");
+     *
+     * // Use with options object
+     * const complexPDF = block.pdf.createBlock({
+     *   url: "https://collegeinfogeek.com/wp-content/uploads/2015/01/10steps-reddit.pdf",
+     *   caption: "The Reddit preview of the 10 Steps to Earning Awesome Grades book."
+     * });
      */
     pdf: {
         supports_children: false,
-        createBlock: ({ url }) => {
-            const isValidImage = validatePDFURL(url);
-            return isValidImage
+        createBlock: (options) => {
+            let url, caption;
+            if (typeof options === "string") {
+                url = options;
+                caption = [];
+            } else {
+                ({ url, caption = [] } = options);
+            }
+            const isValidPDF = validatePDFURL(url);
+            return isValidPDF
                 ? {
                       type: "pdf",
                       pdf: {
@@ -416,6 +699,7 @@ export const block = {
                           external: {
                               url: url,
                           },
+                          caption: enforceRichText(caption),
                       },
                   }
                 : null;
@@ -427,53 +711,101 @@ export const block = {
      *
      * @property {boolean} supports_children - Indicates if the block supports child blocks.
      * @method createBlock
-     * @param {Object} options
-     * @param {Array} [options.rtArray=[]] - An array of rich text items for the quote.
-     * @param {Array} [options.children=[]] - An array of child block objects.
+     * @param {string|string[]|Object} options - A string, an array of strings, or an options object representing the quote content.
+     * @param {string|string[]|Array<Object>} [options.content=[]] - The content as a string, an array of strings, or an array of rich text objects.
+     * @param {Array<Object>} [options.children=[]] - An array of child block objects.
      * @param {string} [options.color="default"] - Color for the text.
-     * @returns {Object} A quote block object.
+     * @returns {Object} A quote block object compatible with Notion's API.
+     * @example
+     * // Use with a string
+     * const simpleQuote = block.quote.createBlock("Simple quote");
+     *
+     * // Use with an array of strings
+     * const multiLineQuote = block.quote.createBlock(["Line 1 of quote", "Line 2 of quote"]);
+     *
+     * // Use with options object
+     * const complexQuote = block.quote.createBlock({
+     *   content: "Complex quote",
+     *   color: "gray",
+     *   children: [
+     *     // Child blocks would go here
+     *   ]
+     * });
      */
     quote: {
         supports_children: true,
-        createBlock: ({ rtArray = [], children = [], color = "default" }) => ({
-            type: "quote",
-            quote: {
-                rich_text: rtArray,
-                color: color,
-                children: children,
-            },
-        }),
+        createBlock: (options) => {
+            let content, children, color;
+            if (typeof options === "string" || Array.isArray(options)) {
+                content = options;
+                children = [];
+                color = "default";
+            } else {
+                ({ content = [], children = [], color = "default" } = options);
+            }
+            return {
+                type: "quote",
+                quote: {
+                    rich_text: enforceRichText(content),
+                    color: color,
+                    ...(children.length > 0 && { children }),
+                },
+            };
+        },
     },
 
     /**
      * Methods to create table blocks.
      *
-     * Must have at least one row created along with it; width is defined by the first row.
-     *
      * @property {boolean} supports_children - Indicates if the block supports child blocks.
      * @method createBlock
-     * @param {Object} options
-     * @param {boolean} options.has_column_header - Whether the table has a column header.
-     * @param {boolean} options.has_row_header - Whether the table has a row header.
-     * @param {Array} options.children - An array of table row block objects.
-     * @returns {Object} A table block object.
+     * @param {Object} options - Options for creating the table.
+     * @param {boolean} [options.has_column_header=false] - Whether the table has a column header.
+     * @param {boolean} [options.has_row_header=false] - Whether the table has a row header.
+     * @param {Array<Array<string>>|Array<Object>} options.rows - An array of rows. Each row can be an array of strings or a table_row object.
+     * @returns {Object} A table block object compatible with Notion's API.
+     * @example
+     * // Use with array of string arrays
+     * const simpleTable = block.table.createBlock({
+     *   rows: [
+     *     ["Header 1", "Header 2"],
+     *     ["Row 1, Cell 1", "Row 1, Cell 2"],
+     *     ["Row 2, Cell 1", "Row 2, Cell 2"]
+     *   ],
+     *   has_column_header: true
+     * });
+     *
+     * // Use with array of table_row objects
+     * const complexTable = block.table.createBlock({
+     *   rows: [
+     *     block.table_row.createBlock(["Header 1", "Header 2"]),
+     *     block.table_row.createBlock(["Row 1, Cell 1", "Row 1, Cell 2"]),
+     *     block.table_row.createBlock(["Row 2, Cell 1", "Row 2, Cell 2"])
+     *   ],
+     *   has_column_header: true,
+     *   has_row_header: false
+     * });
      */
     table: {
-        // Must have at least one row created along with it. Width defined by first row.
         supports_children: true,
         createBlock: ({
-            has_column_header,
-            has_row_header,
-            children = [],
-        }) => ({
-            type: "table",
-            table: {
-                table_width: children[0].length,
-                has_column_header: has_column_header,
-                has_row_header: has_row_header,
-                children: children,
-            },
-        }),
+            has_column_header = false,
+            has_row_header = false,
+            rows = [],
+        }) => {
+            const children = rows.map((row) =>
+                Array.isArray(row) ? block.table_row.createBlock(row) : row
+            );
+            return {
+                type: "table",
+                table: {
+                    table_width: children[0].table_row.cells.length,
+                    has_column_header: has_column_header,
+                    has_row_header: has_row_header,
+                    children: children,
+                },
+            };
+        },
     },
 
     /**
@@ -481,17 +813,27 @@ export const block = {
      *
      * @property {boolean} supports_children - Indicates if the block supports child blocks (not supported for table rows).
      * @method createBlock
-     * @param {Object} options
-     * @param {Array} [options.cells=[]] - An array of arrays of rich text objects for table cells.
-     * @returns {Object} A table row block object.
+     * @param {Array<string|Array<Object>>} cells - An array of cell contents. Each cell can be a string or an array of rich text objects.
+     * @returns {Object} A table row block object compatible with Notion's API.
+     * @example
+     * // Use with an array of strings
+     * const simpleRow = block.table_row.createBlock(["Cell 1", "Cell 2", "Cell 3"]);
+     *
+     * // Use with an array of rich text objects
+     * const complexRow = block.table_row.createBlock([
+     *   [{ type: "text", text: { content: "Cell 1" } }],
+     *   [{ type: "text", text: { content: "Cell 2", annotations: { bold: true } } }],
+     *   [{ type: "text", text: { content: "Cell 3" } }]
+     * ]);
      */
     table_row: {
         supports_children: false,
-        createBlock: ({ cells = [] }) => ({
-            // cells must be array of arrays of Rich Text Objects
+        createBlock: (cells = []) => ({
             type: "table_row",
             table_row: {
-                cells: cells,
+                cells: cells.map((cell) =>
+                    typeof cell === "string" ? enforceRichText(cell) : cell
+                ),
             },
         }),
     },
@@ -501,18 +843,33 @@ export const block = {
      *
      * @property {boolean} supports_children - Indicates if the block supports child blocks (not supported for TOCs).
      * @method createBlock
-     * @param {Object} options
+     * @param {string|Object} [options="default"] - A string representing the color, or an options object.
      * @param {string} [options.color="default"] - Color for the table of contents.
-     * @returns {Object} A table of contents block object.
+     * @returns {Object} A table of contents block object compatible with Notion's API.
+     * @example
+     * // Use with default settings
+     * const simpleTOC = block.table_of_contents.createBlock();
+     *
+     * // Use with a color string
+     * const coloredTOC = block.table_of_contents.createBlock("red");
+     *
+     * // Use with options object
+     * const complexTOC = block.table_of_contents.createBlock({ color: "blue" });
      */
     table_of_contents: {
         supports_children: false,
-        createBlock: ({ color = "default " }) => ({
-            type: "table_of_contents",
-            table_of_contents: {
-                color: color,
-            },
-        }),
+        createBlock: (options = "default") => {
+            const color =
+                typeof options === "string"
+                    ? options
+                    : options.color || "default";
+            return {
+                type: "table_of_contents",
+                table_of_contents: {
+                    color: color,
+                },
+            };
+        },
     },
 
     /**
@@ -520,29 +877,53 @@ export const block = {
      *
      * @property {boolean} supports_children - Indicates if the block supports child blocks.
      * @method createBlock
-     * @param {Object} options
-     * @param {Array} [options.rtArray=[]] - An array of rich text items for the to-do content.
+     * @param {string|string[]|Object} options - A string, an array of strings, or an options object representing the to-do content.
+     * @param {string|string[]|Array<Object>} [options.content=[]] - The content as a string, an array of strings, or an array of rich text objects.
      * @param {boolean} [options.checked=false] - Whether the to-do item is checked.
-     * @param {Array} [options.children=[]] - An array of child block objects.
+     * @param {Array<Object>} [options.children=[]] - An array of child block objects.
      * @param {string} [options.color="default"] - Color for the to-do text.
-     * @returns {Object} A to-do list block object.
+     * @returns {Object} A to-do list block object compatible with Notion's API.
+     * @example
+     * // Use with a string
+     * const simpleToDo = block.to_do.createBlock("Simple task");
+     *
+     * // Use with options object
+     * const complexToDo = block.to_do.createBlock({
+     *   content: "Complex task",
+     *   checked: true,
+     *   color: "green",
+     *   children: [
+     *     // Child blocks would go here
+     *   ]
+     * });
      */
     to_do: {
         supports_children: true,
-        createBlock: ({
-            rtArray = [],
-            checked = false,
-            children = [],
-            color = "default",
-        }) => ({
-            type: "to_do",
-            to_do: {
-                rich_text: rtArray,
-                checked: checked,
-                color: color,
-                children: children,
-            },
-        }),
+        createBlock: (options) => {
+            let content, checked, children, color;
+            if (typeof options === "string" || Array.isArray(options)) {
+                content = options;
+                checked = false;
+                children = [];
+                color = "default";
+            } else {
+                ({
+                    content = [],
+                    checked = false,
+                    children = [],
+                    color = "default",
+                } = options);
+            }
+            return {
+                type: "to_do",
+                to_do: {
+                    rich_text: enforceRichText(content),
+                    checked: checked,
+                    color: color,
+                    ...(children.length > 0 && { children }),
+                },
+            };
+        },
     },
 
     /**
@@ -550,52 +931,77 @@ export const block = {
      *
      * @property {boolean} supports_children - Indicates if the block supports child blocks.
      * @method createBlock
-     * @param {Object} options
-     * @param {Array} [options.rtArray=[]] - An array of rich text items for the toggle content.
-     * @param {Array} [options.children=[]] - An array of child block objects.
+     * @param {string|string[]|Object} options - A string, an array of strings, or an options object representing the toggle content.
+     * @param {string|string[]|Array<Object>} [options.content=[]] - The content as a string, an array of strings, or an array of rich text objects.
+     * @param {Array<Object>} [options.children=[]] - An array of child block objects.
      * @param {string} [options.color="default"] - Color for the toggle text.
-     * @returns {Object} A toggle block object.
+     * @returns {Object} A toggle block object compatible with Notion's API.
+     * @example
+     * // Use with a string
+     * const simpleToggle = block.toggle.createBlock("Simple toggle");
+     *
+     * // Use with options object
+     * const complexToggle = block.toggle.createBlock({
+     *   content: "Complex toggle",
+     *   color: "blue",
+     *   children: [
+     *     // Child blocks would go here
+     *   ]
+     * });
      */
     toggle: {
         supports_children: true,
-        createBlock: ({ rtArray = [], children = [], color = "default" }) => ({
-            type: "toggle",
-            toggle: {
-                rich_text: rtArray,
-                color: color,
-                children: children,
-            },
-        }),
+        createBlock: (options) => {
+            let content, children, color;
+            if (typeof options === "string" || Array.isArray(options)) {
+                content = options;
+                children = [];
+                color = "default";
+            } else {
+                ({ content = [], children = [], color = "default" } = options);
+            }
+            return {
+                type: "toggle",
+                toggle: {
+                    rich_text: enforceRichText(content),
+                    color: color,
+                    ...(children.length > 0 && { children }),
+                },
+            };
+        },
     },
-
-    /**
-     * @typedef {Object} VideoBlockOptions
-     * @property {string} url - The URL for the video.
-     */
-
-    /**
-     * @typedef {Object} VideoBlock
-     * @property {string} type - The block type.
-     * @property {Object} video - The video object.
-     * @property {string} video.type - The type of video ("external").
-     * @property {Object} video.external - The external video details.
-     * @property {string} video.external.url - The URL of the video.
-     */
 
     /**
      * Methods to create video blocks.
      *
-     * Returns null on invalid video URL; remove null from the final children array.
-     *
      * @property {boolean} supports_children - Indicates if the block supports child blocks (not supported for videos).
-     * @param {VideoBlockOptions} options - Options to create a video block.
-     * @returns {VideoBlock|null} A video block object or null if the URL is invalid.
+     * @method createBlock
+     * @param {string|Object} options - A string representing the video URL, or an options object.
+     * @param {string} options.url - The URL for the video.
+     * @param {string|string[]|Array<Object>} [options.caption=[]] - The caption as a string, an array of strings, or an array of rich text objects.
+     * @returns {Object|null} A video block object compatible with Notion's API, or null if the URL is invalid.
+     * @example
+     * // Use with a string
+     * const simpleVideo = block.video.createBlock("https://www.youtube.com/watch?v=ec5m6t77eYM");
+     *
+     * // Use with options object
+     * const complexVideo = block.video.createBlock({
+     *   url: "https://www.youtube.com/watch?v=ec5m6t77eYM",
+     *   caption: "Never gonna give you up"
+     * });
      */
     video: {
         supports_children: false,
-        createBlock: ({ url }) => {
-            const isValidImage = validateVideoURL(url);
-            return isValidImage
+        createBlock: (options) => {
+            let url, caption;
+            if (typeof options === "string") {
+                url = options;
+                caption = [];
+            } else {
+                ({ url, caption = [] } = options);
+            }
+            const isValidVideo = validateVideoURL(url);
+            return isValidVideo
                 ? {
                       type: "video",
                       video: {
@@ -603,6 +1009,7 @@ export const block = {
                           external: {
                               url: url,
                           },
+                          caption: enforceRichText(caption),
                       },
                   }
                 : null;

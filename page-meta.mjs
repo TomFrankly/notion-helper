@@ -1,5 +1,5 @@
 import { setIcon } from "./emoji-and-files.mjs";
-import { buildRichTextObj } from "./rich-text.mjs";
+import { buildRichTextObj, enforceRichText, enforceRichTextObject } from "./rich-text.mjs";
 import { isValidURL, validateDate } from "./utils.mjs";
 
 /*
@@ -53,6 +53,46 @@ export const page_meta = {
         }),
     },
 };
+
+/*
+ * Quality-of-life functions for page meta:
+ */
+
+/**
+ * Creates a parent database object for Notion API.
+ * @param {string} database_id - The ID of the parent database.
+ * @returns {Object} A parent database object.
+ */
+export function dbId(database_id) {
+    return page_meta.parent.createMeta({ id: database_id, type: "database_id"})
+}
+
+/**
+ * Creates a parent page object for Notion API.
+ * @param {string} page_id - The ID of the parent page.
+ * @returns {Object} A parent page object.
+ */
+export function pageId(page_id) {
+    return page_meta.parent.createMeta({ id: page_id, type: "page_id"})
+}
+
+/**
+ * Creates a cover object for Notion API.
+ * @param {string} url - The URL of the cover image.
+ * @returns {Object} A cover object.
+ */
+export function cover(url) {
+    return page_meta.cover.createMeta(url)
+}
+
+/**
+ * Creates an icon object for Notion API.
+ * @param {string} url - The URL of the icon image or an emoji character.
+ * @returns {Object} An icon object.
+ */
+export function icon(url) {
+    return page_meta.icon.createMeta(url)
+}
 
 /*
  * Object with methods for constructing each of the possible property types within a Notion database page.
@@ -347,6 +387,137 @@ export const page_props = {
     },
 };
 
+/*
+ * Quality-of-life functions for page props:
+ */
+
+/**
+ * Creates a title property object.
+ * @param {string|string[]} value - The title content, either a string or an array of strings.
+ * @returns {Object} A title property object.
+ */
+export function title(value) {
+    return page_props.title.createProp(value);
+}
+
+/**
+ * Creates a rich text property object.
+ * @param {string|string[]} value - The rich text content, either a string or an array of strings.
+ * @returns {Object} A rich text property object.
+ */
+export function richText(value) {
+    return page_props.rich_text.createProp(value);
+}
+
+/**
+ * Creates a checkbox property object.
+ * @param {boolean} value - The boolean value for the checkbox state.
+ * @returns {Object} A checkbox property object.
+ */
+export function checkbox(value) {
+    return page_props.checkbox.createProp(value);
+}
+
+/**
+ * Creates a date property object.
+ * @param {string} start - The start date in ISO 8601 format.
+ * @param {string} [end] - The optional end date in ISO 8601 format.
+ * @returns {Object} A date property object.
+ */
+export function date(start, end) {
+    return page_props.date.createProp(start, end);
+}
+
+/**
+ * Creates an email property object.
+ * @param {string} value - The email address.
+ * @returns {Object} An email property object.
+ */
+export function email(value) {
+    return page_props.email.createProp(value);
+}
+
+/**
+ * Creates a files property object.
+ * @param {Array<{name: string, url: string}>} fileArray - The array of file objects.
+ * @returns {Object} A files property object.
+ */
+export function files(fileArray) {
+    return page_props.files.createProp(fileArray);
+}
+
+/**
+ * Creates a multi-select property object
+ * @param {string[]} valuesArray - The array of selected values.
+ * @returns {Object} A multi-select property object.
+ */
+export function multiSelect(valuesArray) {
+    return page_props.multi_select.createProp(valuesArray);
+}
+
+/**
+ * Creates a number property object.
+ * @param {number|string} value - The numeric value. A string may also be passed, and it will be converted to a number if possible.
+ * @returns {Object} A number property object.
+ */
+export function number(value) {
+    return page_props.number.createProp(value);
+}
+
+/**
+ * Creates a people property object.
+ * @param {string[]} personArray - The array of person IDs.
+ * @returns {Object} A people property object.
+ */
+export function people(personArray) {
+    return page_props.people.createProp(personArray);
+}
+
+/**
+ * Creates a phone number property object.
+ * @param {string} value - The phone number.
+ * @returns {Object} A phone number property object.
+ */
+export function phoneNumber(value) {
+    return page_props.phone_number.createProp(value);
+}
+
+/**
+ * Creates a relation property object.
+ * @param {string[]} pageArray - The array of related page IDs.
+ * @returns {Object} A relation property object.
+ */
+export function relation(pageArray) {
+    return page_props.relation.createProp(pageArray);
+}
+
+/**
+ * Creates a select property object.
+ * @param {string} value - The selected value.
+ * @returns {Object} A select property object.
+ */
+export function select(value) {
+    return page_props.select.createProp(value);
+}
+
+/**
+ * Creates a status property object.
+ * @param {string} value - The status value.
+ * @returns {Object} A status property object.
+ */
+export function status(value) {
+    return page_props.status.createProp(value);
+}
+
+/**
+ * Creates a URL property object.
+ * @param {string} value - The URL.
+ * @returns {Object} A URL property object.
+ */
+export function url(value) {
+    return page_props.url.createProp(value);
+}
+
 /**
  * Validates values passed to the createProp() methods above. Performs some transformation in certain cases.
  * 
@@ -365,26 +536,7 @@ function validateValue(value, type) {
     }
 
     if (type === "rich_text") {
-        let finalValue;
-        if (!Array.isArray(value) && typeof value !== 'string') {
-            console.error(`Invalid data type passed to a rich_text property. Returning null for this property.`)
-            finalValue = null
-            return finalValue
-        }
-        
-        if (typeof value === "string") {
-            finalValue = buildRichTextObj(value); // If value is a string, create single-element RTO array
-        }
-
-        if (Array.isArray(value)) {
-            if (value.every((element) => typeof element === "string")) {
-                finalValue = value.flatMap((line) => buildRichTextObj(line)); // If value is array of strings, create RTO array
-            } else {
-                finalValue = value; // Else assume value is a valid array of RTOs already
-            }
-        }
-
-        return finalValue
+        return enforceRichText(value)
     }
 
     if (type === "number") {
