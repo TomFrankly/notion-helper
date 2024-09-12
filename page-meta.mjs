@@ -163,7 +163,7 @@ export const page_props = {
             const date = {
                 date: {
                     start: validateValue(start, "date"),
-                    end: validateValue(end, "date"),
+                    end: end ? validateValue(end, "date") : null,
                 },
             }
 
@@ -526,12 +526,12 @@ export function url(value) {
  * @returns 
  */
 function validateValue(value, type) {
-    if (!value || !type || typeof type !== "string") {
+    if (value === undefined || value === null || !type || typeof type !== "string") {
         console.error(
             `Invalid value or type variable provided to validateValue().`
         );
         throw new Error(
-            `Invalid value or type vairable provided to validateValue().`
+            `Invalid value or type variable provided to validateValue().`
         );
     }
 
