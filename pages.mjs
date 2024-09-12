@@ -735,7 +735,8 @@ export function createNotion() {
                     data.children = chunkedBlocks[0];
                     result.additionalBlocks = chunkedBlocks.slice(1);
                 }
-                result.content = data;
+                const { parent, ...rest } = data
+                result.content = parent ? { parent, ...rest } : data;
             } else if (hasProperty && !hasBlock) {
                 result.content = data.properties;
             } else if (hasBlock && !hasProperty) {
