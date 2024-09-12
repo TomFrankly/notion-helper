@@ -1,10 +1,12 @@
 # notion-helper
 
-This is a little library of functions I use to work more easily with the Notion API.
+A heaping spoonful of syntactic sugar for the Notion API.
 
-It's mainly built to help you create pages and blocks without writing so many nested objects and arrays by hand.
+This library is mainly built to help you create pages and blocks without writing so many nested objects and arrays by hand.
 
 All functions and methods have [JSDoc](https://jsdoc.app/) markup to support IntelliSense.
+
+[Full documentation on all functions can methods can be found here.](https://tomfrankly.github.io/notion-helper/)
 
 ## Installation
 
@@ -42,16 +44,17 @@ const paragraphBlocks = makeParagraphBlocks(quotes);
 const paragraphBlocks = NotionHelper.makeParagraphBlocks(quotes);
 ```
 
-Notion Helper currently contains four direct functions you can use:
+Notion Helper currently contains five direct functions you can use:
 
-- `quickPages()` - lets you easily create valid page objects with property values and child blocks using very simple JSON objects. This is the highest-level function in the library – you can see its documentation below.
+- `quickPages()` - lets you easily create multiple valid page objects with property values and child blocks using very simple JSON objects and a simple schema object.
+- `createNotion()` - a powerful factory function that can build full page objects, property objects, or child block arrays through method-chaining.
 - `makeParagraphBlocks()` - takes an array of strings and returns an array of [Paragraph blocks](https://developers.notion.com/reference/block#paragraph) without any special formatting or links. Provides a very quick way to prep a lot of text for sending to Notion.
 - `buildRichTextObj()` - takes a string, options array, and URL and creates a [Rich Text Object](https://developers.notion.com/reference/rich-text) array (use [flatMap()](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/flatMap) if you're inserting its output into another array). Splits strings over the [character limit](https://developers.notion.com/reference/request-limits#limits-for-property-values) for you as well. _Currently only works for text objects; mentions and equations aren't supported yet._.
 - `setIcon()` - takes a string, which should be a single emoji (🌵) or an image URL and returns the correct object (emoji or external) value for an `icon` property.
 
 ### Using `quickPages()`
 
-Often you'll have an array of relatively simple data that you want to turn into Notion pages:
+Often you'll have an array of relatively simple data that you want to turn into multiple Notion pages:
 
 ```js
 const tasks = [
@@ -282,7 +285,226 @@ const pages = quickPages({
 })
 ```
 
-This library also provides objects with methods for quickly creating pages and blocks:
+### Using `createNotion()`
+
+[Read the full createNotion() reference here.](https://tomfrankly.github.io/notion-helper/#builder)
+
+The `createNotion` function lets you easily build high-level Notion API data structures using simple method-chaining syntax. It can create:
+
+- Full page objects that can be passed direct as the argument when [creating a page](https://developers.notion.com/reference/post-page)
+- Property objects that can be added to preconstucted page objects
+- Arrays of blocks that can be passed to the `children` property of a page object or [Append Block Children](https://developers.notion.com/reference/patch-block-children) request.
+
+This function can also help you deal with large amounts of data that would exceed the Notion API's [request size limits](https://developers.notion.com/reference/request-limits#size-limits).
+
+It returns an object with one or two properties:
+
+- `content`: The constructed page object, property object, or children array
+- `additionalBlocks`: If you constructed a `children` array with more than 100 blocks, this property will contain an array of arrays, each with up to 100 blocks (not including the first 100, which can be send in the initial request as part of `content`.)
+
+This function has methods for all supported Notion property types, block types, and page meta types, and provides shorthand names for all of them. It also provides generic methods:
+
+- `property()`
+- `addBlock()`
+
+Additionally, it supports nesting as much as is allowed by the API. You can set a block as a parent block by using the `startParent()` method, defining the block's details just as you would with `addBlock()`.
+
+All block methods you chain to `startParent()` will be children of that block until you add `endParent()` to the chain.
+
+Example usage:
+
+```js
+// Goal: Create a page in an Albums database with Name, Artist, and Release Date properties.
+// Page content should include Tracklist and Album Art sections.
+const album = {
+    name: "Mandatory Fun",
+    artist: `"Weird Al" Yankovic`,
+    release_date: "07/15/2014",
+    cover: "https://m.media-amazon.com/images/I/81cPt0wKVIL._UF1000,1000_QL80_.jpg",
+    tracks: [
+        "Handy (Parody of Fancy by Iggy Azalea)",
+        "Lame Claim to Fame (Style Parody of Southern Culture on the Skids)",
+        "Foil (Parody of Royals by Lorde)",
+        "Sports Song (Style Parody of College Football Fight Songs)",
+        "Word Crimes (Parody of Blurred Lines by Robin Thicke)",
+        "My Own Eyes (Style Parody of Foo Fighters)",
+        "NOW That’s What I Call Polka!",
+        "Mission Statement (Style Parody of Crosby, Stills & Nash)",
+        "Inactive (Parody of Radioactive by Imagine Dragons)",
+        "First World Problems (Style Parody of Pixies)",
+        "Tacky (Parody of Happy by Pharrell Williams)",
+        "Jackson Park Express (Style Parody of Cat Stevens)"
+    ]
+}
+
+// The target database
+const database_id = "41eb98ef0a1ec4a6c91tq2thrb2930a";
+
+// Create a builder instance and chain methods to add the page details
+const builder = createNotion()
+  .parentDb(database_id)
+  .title("Name", album.name)
+  .richText("Artist", album.artist)
+  .date("Released", album.release_date)
+  .heading1("Tracklist")
+
+// Loop through the tracks to add numbered list items
+album.tracks.forEach((track) => {
+  // num() is an alias function for numberedListItem(). Use number() for number properties
+  builder.num(track)
+}
+
+// Add the album art section, then build the final page object
+const result = builder
+  .heading1("Album Art")
+  .image(album.cover)
+  .build() // Call build() at the end of the chain
+
+// We called parentDb(), so result.content is a page object we can use
+// to create a new page in our target database
+const response = await notion.pages.create(result.content)
+```
+
+The result:
+
+![Notion page created by the factory function](https://i.imgur.com/W6Zdzgv.png)
+
+<details>
+<summary>You can also create more complex page structures with tables and child-block nesting:</summary>
+
+```js
+// A more complex album object.
+// Goal: Turn the track list into a Notion Table within the album's page
+const album = {
+    name: "Mandatory Fun",
+    artist: `"Weird Al" Yankovic`,
+    release_date: "07/15/2014",
+    cover: "https://m.media-amazon.com/images/I/81cPt0wKVIL._UF1000,1000_QL80_.jpg",
+    tracks: [
+        {
+            "No.": 1,
+            Title: "Handy",
+            "Writer(s)":
+                "Amethyst Kelly\nCharlotte Aitchison\nGeorge Astasio\nJason Pebworth\nJonathan Shave\nKurtis McKenzie\nJon Turner\nAl Yankovic",
+            "Parody of": 'Fancy" by Iggy Azalea featuring Charli XCX',
+            Length: "2:56",
+        },
+        {
+            "No.": 2,
+            Title: "Lame Claim to Fame",
+            "Writer(s)": "Yankovic",
+            "Parody of": "Style parody of Southern Culture on the Skids[79]",
+            Length: "3:45",
+        },
+        {
+            "No.": 3,
+            Title: "Foil",
+            "Writer(s)": "Joel Little\nElla Yelich-O'Connor\nYankovic",
+            "Parody of": 'Royals" by Lorde',
+            Length: "2:22",
+        },
+        {
+            "No.": 4,
+            Title: "Sports Song",
+            "Writer(s)": "Yankovic",
+            "Parody of": "Style parody of college football fight songs[25]",
+            Length: "2:14",
+        },
+        {
+            "No.": 5,
+            Title: "Word Crimes",
+            "Writer(s)":
+                "Robin Thicke\nPharrell Williams\nClifford Harris Jr.\nMarvin Gaye1\nYankovic",
+            "Parody of":
+                'Blurred Lines" by Robin Thicke featuring T.I. and Pharrell Williams',
+            Length: "3:43",
+        },
+        {
+            "No.": 6,
+            Title: "My Own Eyes",
+            "Writer(s)": "Yankovic",
+            "Parody of": "Style parody of Foo Fighters[79]",
+            Length: "3:40",
+        },
+        {
+            "No.": 7,
+            Title: "Now That's What I Call Polka!",
+            "Writer(s)": "showVarious writers:",
+            "Parody of": "showA polka medley including:",
+            Length: "4:05",
+        },
+        {
+            "No.": 8,
+            Title: "Mission Statement",
+            "Writer(s)": "Yankovic",
+            "Parody of": "Style parody of Crosby, Stills & Nash[79]",
+            Length: "4:28",
+        },
+        {
+            "No.": 9,
+            Title: "Inactive",
+            "Writer(s)":
+                "Alexander Grant\nDaniel Reynolds\nDaniel Sermon\nBenjamin McKee\nJoshua Mosser\nYankovic",
+            "Parody of": 'Radioactive" by Imagine Dragons',
+            Length: "2:56",
+        },
+        {
+            "No.": 10,
+            Title: "First World Problems",
+            "Writer(s)": "Yankovic",
+            "Parody of": "Style parody of Pixies[79]",
+            Length: "3:13",
+        },
+        {
+            "No.": 11,
+            Title: "Tacky",
+            "Writer(s)": "Williams\nYankovic",
+            "Parody of": 'Happy" by Pharrell Williams',
+            Length: "2:53",
+        },
+        {
+            "No.": 12,
+            Title: "Jackson Park Express",
+            "Writer(s)": "Yankovic",
+            "Parody of": "Style parody of Cat Stevens[79]",
+            Length: "9:05",
+        },
+    ],
+};
+
+// The target database
+const database_id = "41eb98ef0a1ec4a6c91tq2thrb2930a";
+
+const builder = createNotion()
+    .parentDb(database_id)
+    .title("Name", album.name)
+    .richText("Artist", album.artist)
+    .date("Released", album.release_date)
+    .heading1("Tracklist")
+    .startParent("table", {
+        has_column_header: true,
+        rows: [["No", "Title", "Writer(s)", "Parody of", "Length"]],
+    });
+
+// Loop the tracks array as before, but now create table_row blocks
+// Note how we use startParent() to create the table block above.
+// This is because table_row blocks must be in the children array of a table block.
+album.tracks.forEach((track) => {
+    builder.tableRow([track["No."], track.Title, track["Writer(s)"], track["Parody of"], track.Length]);
+});
+
+const result = builder
+    .endParent() // endParent() to break out of the table block's children array
+    .heading1("Album Art")
+    .image(album.cover)
+    .build();
+
+const response = notion.pages.create(result.content);
+```
+
+</details>
+
+Notion-Helper also provides objects with methods for quickly creating pages and blocks:
 
 ### `block`
 
