@@ -824,6 +824,23 @@ export function createNotion() {
         },
 
         /**
+         * Adds a block to the stack for each element in the passed array.
+         * @returns {this} The builder instance for method chaining.
+         */
+        loop(blockTypeOrCallback, arr) {
+            if (typeof blockTypeOrCallback === 'function') {
+                arr.forEach((element, index) => {
+                    blockTypeOrCallback(this, element, index)
+                })
+            } else {
+                arr.forEach((element) => {
+                    this.addBlock(blockTypeOrCallback, element)
+                })
+            }
+            return this
+        },
+
+        /**
          * Builds and returns the final Notion object based on the current state of the builder.
          *
          * @returns {this} An object containing the built content and any additional blocks.
