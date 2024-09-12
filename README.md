@@ -367,7 +367,7 @@ const response = await notion.pages.create(result.content)
 
 The result:
 
-![Notion page created by the factory function](./guides/images/Mandatory%20Fun.png)
+![Notion page created by the factory function](https://i.imgur.com/W6Zdzgv.png)
 
 <details>
 <summary>You can also create more complex page structures with tables and child-block nesting:</summary>
