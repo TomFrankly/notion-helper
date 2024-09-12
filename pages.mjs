@@ -477,7 +477,7 @@ export function createNotion() {
             }
 
             const newBlock = block[blockType].createBlock(options);
-            if (!newBlock[blockType].supports_children) {
+            if (!block[blockType].supports_children) {
                 const error = `startParent() called with type ${blockType}, which does not support child blocks.`;
                 console.error(error);
                 throw new Error(error);
