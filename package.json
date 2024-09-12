@@ -1,0 +1,24 @@
+{
+  "name": "notion-helper",
+  "description": "A library of functions for working more easily with the Notion API",
+  "version": "1.1.18",
+  "type": "module",
+  "main": "index.mjs",
+  "devDependencies": {},
+  "author": "Thomas Frank <thomas@thomasjfrank.com> (https://thomasjfrank.com)",
+  "license": "MIT",
+  "keywords": [
+    "notion",
+    "notion api",
+    "notionapi",
+    "notion-api"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/TomFrankly/notion-helper"
+  },
+  "scripts": {
+    "docs": "documentation build *.mjs -f html --github -o docs"
+  },
+  "homepage": "https://github.com/TomFrankly/notion-helper"
+}
