@@ -221,6 +221,8 @@ export function createNotion() {
         currentBlockStack,
         nestingLevel,
         hasPageParent,
+        hasPageId,
+        hasBlockId,
         hasProperty,
         hasBlock;
 
@@ -299,6 +301,7 @@ export function createNotion() {
          */
         pageId(page_id) {
             data.page_id = page_meta.page.createMeta(page_id);
+            hasPageId = true;
             return this;
         },
 
@@ -319,7 +322,7 @@ export function createNotion() {
          */
         blockId(block_id) {
             data.block_id = page_meta.block.createMeta(block_id);
-            hasPageParent = true;
+            hasBlockId = true;
             nestingLevel++;
             return this;
         },
@@ -967,6 +970,22 @@ export function createNotion() {
                 }
                 const { parent, ...rest } = data;
                 result.content = parent ? { parent, ...rest } : data;
+            } else if (hasPageId) {
+                if (data.children.length > CONSTANTS.MAX_BLOCKS) {
+                    const chunkedBlocks = chunkBlocks(data.children);
+                    data.children = chunkedBlocks[0];
+                    result.additionalBlocks = chunkedBlocks.slice(1);
+                }
+                const { page_id, ...rest } = data;
+                result.content = page_id ? { page_id, ...rest } : data;
+            } else if (hasBlockId) {
+                if (data.children.length > CONSTANTS.MAX_BLOCKS) {
+                    const chunkedBlocks = chunkBlocks(data.children);
+                    data.children = chunkedBlocks[0];
+                    result.additionalBlocks = chunkedBlocks.slice(1);
+                }
+                const { block_id, ...rest } = data;
+                result.content = block_id ? { block_id, ...rest } : data;
             } else if (hasProperty && !hasBlock) {
                 result.content = data.properties;
             } else if (hasBlock && !hasProperty) {
