@@ -1,3 +1,5 @@
+import { enforceStringLength } from "./utils.mjs";
+
 /**
  * Builds a Rich Text Object. See: https://developers.notion.com/reference/rich-text
  * @param {(string|Object)} input - The text content or input object. If string, the input can be normal text or an equation. If object, it can be a text, equation, or mention object.
@@ -23,6 +25,9 @@ export function buildRichTextObj(input, annotations = {}, url, type = "text") {
                             content: input,
                             link: url ? { url: url } : null,
                         },
+                        annotations: {
+                            ...annotations
+                        }
                     },
                 ];
             case "equation":
@@ -79,6 +84,8 @@ export function buildRichTextObj(input, annotations = {}, url, type = "text") {
     console.error(error);
     throw new Error(error);
 }
+
+// TODO: Run everything passed to enforceRichText through enforceStringLength
 
 /**
  * Enforces Rich Text format for content.
