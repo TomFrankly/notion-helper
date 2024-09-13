@@ -343,34 +343,93 @@ export const page_props = {
      */
     files: {
         type: "string[]",
-        returns: "array", // Type not currently used for validation
+        returns: "array",
         /**
          * Sets a files property's value.
          * @function
-         * @param {Array<{name: string, url: string}>} fileArray - The array of file objects.
+         * @param {(string|Array<string>|Array<{name: string, url: string})>} fileArray - A url string, or an array of url strings, or an array of file objects.
          * @returns {Object} A files property object.
          */
-        setProp: (fileArray) => {
-            const files = fileArray.map((file) => {
-                if (!validateValue(file.url, "url")) {
-                    return null;
+        setProp: (files) => {
+            if (typeof files === "string") {
+                // string case
+                if (!validateValue(files, "url")) {
+                    return {
+                        files: null,
+                    };
                 } else {
                     return {
-                        name: validateValue(file.name, "string"),
-                        external: {
-                            url: validateValue(file.url, "url"),
-                        },
+                        files: [
+                            {
+                                external: {
+                                    url: validateValue(files, "url"),
+                                },
+                            },
+                        ],
                     };
                 }
-            });
+            } else if (Array.isArray(files)) {
+                if (files.every((file) => typeof file === "object")) {
+                    // array of file objects
+                    const fileObjects = files
+                        .map((file) => {
+                            if (!file.url || !validateValue(file.url, "url")) {
+                                return null;
+                            } else {
+                                return {
+                                    ...(file.name &&
+                                        file.name !== "" && {
+                                            name: validateValue(
+                                                file.name,
+                                                "string"
+                                            ),
+                                        }),
+                                    external: {
+                                        url: validateValue(file.url, "url"),
+                                    },
+                                };
+                            }
+                        })
+                        .filter(Boolean);
 
-            if (files.every((file) => file === null)) {
-                return {
-                    files: null,
-                };
+                    if (fileObjects.length < 1) {
+                        return {
+                            files: null,
+                        };
+                    } else {
+                        return {
+                            files: fileObjects,
+                        };
+                    }
+                } else {
+                    // array of url strings
+                    const fileObjects = files
+                        .map((file) => {
+                            if (!validateValue(file, "url")) {
+                                return null;
+                            } else {
+                                return {
+                                    external: {
+                                        url: validateValue(file, "url"),
+                                    },
+                                };
+                            }
+                        })
+                        .filter(Boolean);
+
+                    if (fileObjects.length < 1) {
+                        return {
+                            files: null,
+                        };
+                    } else {
+                        return {
+                            files: fileObjects,
+                        };
+                    }
+                }
             } else {
                 return {
-                    files: files,
+                    files: null,
                 };
             }
         },
@@ -384,18 +443,41 @@ export const page_props = {
      */
     multi_select: {
         type: "string[]",
-        returns: "array", // Not currently used for validation
+        returns: "array",
         /**
          * Sets a multi_select property's value.
          * @function
-         * @param {string[]} valuesArray - The array of selected values.
+         * @param {(string|string[])} values - A single string value or an array of string values.
          * @returns {Object} A multi-select property object.
          */
-        setProp: (valuesArray) => ({
-            multi_select: valuesArray.map((value) => ({
-                name: validateValue(value, "string"),
-            })),
-        }),
+        setProp: (values) => {
+            if (typeof values === "string") {
+                // single string case
+                const validatedValue = validateValue(values, "string");
+                return {
+                    multi_select: validatedValue
+                        ? [{ name: validatedValue }]
+                        : null,
+                };
+            } else if (Array.isArray(values)) {
+                // array case
+                const validValues = values
+                    .map((value) => {
+                        const validatedValue = validateValue(value, "string");
+                        return validatedValue ? { name: validatedValue } : null;
+                    })
+                    .filter(Boolean);
+
+                return {
+                    multi_select: validValues.length > 0 ? validValues : null,
+                };
+            } else {
+                // invalid input
+                return {
+                    multi_select: null,
+                };
+            }
+        },
     },
 
     /**
@@ -426,30 +508,36 @@ export const page_props = {
      */
     people: {
         type: "string[]",
-        returns: "array", // Not currently used for validation
+        returns: "array",
         /**
          * Sets a people property's value.
          * @function
-         * @param {string[]} personArray - The array of person IDs.
+         * @param {(string|string[])} values - A single person ID or an array of person IDs.
          * @returns {Object} A people property object.
          */
-        setProp: (personArray) => {
-            const people = personArray.map((person) => {
-                if (!validateValue(person, "string")) {
-                    return null;
-                } else {
-                    return {
-                        object: "user",
-                        id: validateValue(person, "string"),
-                    };
-                }
-            });
-
-            if (people.every((person) => person === null)) {
-                return null;
-            } else {
+        setProp: (values) => {
+            if (typeof values === "string") {
+                // single string case
+                const person = validateValue(values, "string");
                 return {
-                    people: people,
+                    people: person ? [{ object: "user", id: person }] : null,
+                };
+            } else if (Array.isArray(values)) {
+                // array case
+                const people = values
+                    .map((value) => {
+                        const person = validateValue(value, "string");
+                        return person ? { object: "user", id: person } : null;
+                    })
+                    .filter(Boolean);
+
+                return {
+                    people: people.length > 0 ? people : null,
+                };
+            } else {
+                // invalid input
+                return {
+                    people: null,
                 };
             }
         },
@@ -483,28 +571,33 @@ export const page_props = {
      */
     relation: {
         type: "string[]",
+        returns: "array",
         /**
          * Sets a relation property's value.
          * @function
-         * @param {string[]} pageArray - The array of related page IDs.
+         * @param {(string|string[])} values - A single page ID or an array of page IDs.
          * @returns {Object} A relation property object.
          */
-        setProp: (pageArray) => {
-            const pages = pageArray.map((page) => {
-                if (!validateValue(page, "string")) {
-                    return null;
-                } else {
-                    return {
-                        id: validateValue(page, "string"),
-                    };
-                }
-            });
-
-            if (pages.every((page) => page === null)) {
-                return null;
-            } else {
+        setProp: (values) => {
+            if (typeof values === "string") { // single string case
+                const page = validateValue(values, "string");
                 return {
-                    relation: pages,
+                    relation: page ? [{ id: page }] : null,
+                };
+            } else if (Array.isArray(values)) { // array case
+                const pages = values
+                    .map((value) => {
+                        const page = validateValue(value, "string");
+                        return page ? { id: page } : null;
+                    })
+                    .filter(Boolean);
+
+                return {
+                    relation: pages.length > 0 ? pages : null,
+                };
+            } else { // invalid input
+                return {
+                    relation: null,
                 };
             }
         },
@@ -638,21 +731,21 @@ export function email(value) {
 /**
  * Creates a files property object.
  * @memberof PropertyShorthand
- * @param {Array<{name: string, url: string}>} fileArray - The array of file objects.
+ * @param {(string|Array<string>|Array<{name: string, url: string})>} files - A url string, or an array of url strings, or an array of file objects.
  * @returns {Object} A files property object.
  */
-export function files(fileArray) {
-    return page_props.files.setProp(fileArray);
+export function files(files) {
+    return page_props.files.setProp(files);
 }
 
 /**
  * Creates a multi-select property object.
  * @memberof PropertyShorthand
- * @param {string[]} valuesArray - The array of selected values.
+ * @param {(string|string[])} values - A single string value or an array of string values.
  * @returns {Object} A multi-select property object.
  */
-export function multiSelect(valuesArray) {
-    return page_props.multi_select.setProp(valuesArray);
+export function multiSelect(values) {
+    return page_props.multi_select.setProp(values);
 }
 
 /**
@@ -668,11 +761,11 @@ export function number(value) {
 /**
  * Creates a people property object.
  * @memberof PropertyShorthand
- * @param {string[]} personArray - The array of person IDs.
+ * @param {(string|string[])} people - A single person ID or an array of person IDs.
  * @returns {Object} A people property object.
  */
-export function people(personArray) {
-    return page_props.people.setProp(personArray);
+export function people(people) {
+    return page_props.people.setProp(people);
 }
 
 /**
@@ -688,11 +781,11 @@ export function phoneNumber(value) {
 /**
  * Creates a relation property object.
  * @memberof PropertyShorthand
- * @param {string[]} pageArray - The array of related page IDs.
+ * @param {(string|string[])} values - A single page ID or an array of page IDs.
  * @returns {Object} A relation property object.
  */
-export function relation(pageArray) {
-    return page_props.relation.setProp(pageArray);
+export function relation(values) {
+    return page_props.relation.setProp(values);
 }
 
 /**

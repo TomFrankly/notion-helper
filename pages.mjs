@@ -1,8 +1,10 @@
-import { buildRichTextObj } from "./rich-text.mjs";
+import { buildRichTextObj, enforceRichText } from "./rich-text.mjs";
 import { makeParagraphBlocks } from "./blocks.mjs";
 import { page_meta, page_props } from "./page-meta.mjs";
 import { block } from "./blocks.mjs";
 import CONSTANTS from "./constants.mjs";
+import { enforceStringLength } from "./utils.mjs";
+
 // TODO - allow passing in a Notion db response in order to validate against the db itself
 // TODO - probably split out schema validation as its own function
 
@@ -618,11 +620,24 @@ export function createNotion() {
 
         /**
          * Adds a paragraph block to the current stack.
+         * If this method recieves a string over the max character length, it will split it and
+         * add multiple paragraph blocks to the stack. This differs from the other block methods,
+         * which will instead split long strings into an array of multiple rich_text objects.
+         * 
+         * If you prefer that behavior for paragraphs, you can import enforceStringLength()
+         * yourself, run your string through it, then pass the returned array to this method.
+         * 
          * @returns {this} The builder instance for method chaining.
          * @see block.paragraph.createBlock for full documentation
          */
         paragraph(options) {
-            return this.addBlock("paragraph", options);
+            if (typeof options === "string" && options.length > CONSTANTS.MAX_TEXT_LENGTH) {
+                const strings = enforceStringLength(options).filter(Boolean)
+                strings.forEach((string) => this.addBlock("paragraph", string))
+                return this
+            } else {
+                return this.addBlock("paragraph", options);
+            }
         },
 
         /**
@@ -631,7 +646,15 @@ export function createNotion() {
          * @see block.heading_1.createBlock for full documentation
          */
         heading1(options) {
-            return this.addBlock("heading_1", options);
+            let value
+
+            if (typeof options === "string" && options.length > CONSTANTS.MAX_TEXT_LENGTH) {
+                value = enforceStringLength(options).filter(Boolean)
+            } else {
+                value = options
+            }
+            
+            return this.addBlock("heading_1", value);
         },
 
         /**
@@ -640,7 +663,15 @@ export function createNotion() {
          * @see block.heading_2.createBlock for full documentation
          */
         heading2(options) {
-            return this.addBlock("heading_2", options);
+            let value
+
+            if (typeof options === "string" && options.length > CONSTANTS.MAX_TEXT_LENGTH) {
+                value = enforceStringLength(options).filter(Boolean)
+            } else {
+                value = options
+            }
+            
+            return this.addBlock("heading_2", value);
         },
 
         /**
@@ -649,7 +680,15 @@ export function createNotion() {
          * @see block.heading_3.createBlock for full documentation
          */
         heading3(options) {
-            return this.addBlock("heading_3", options);
+            let value
+
+            if (typeof options === "string" && options.length > CONSTANTS.MAX_TEXT_LENGTH) {
+                value = enforceStringLength(options).filter(Boolean)
+            } else {
+                value = options
+            }
+
+            return this.addBlock("heading_3", value);
         },
 
         /**
@@ -658,7 +697,15 @@ export function createNotion() {
          * @see block.bulleted_list_item.createBlock for full documentation
          */
         bulletedListItem(options) {
-            return this.addBlock("bulleted_list_item", options);
+            let value
+
+            if (typeof options === "string" && options.length > CONSTANTS.MAX_TEXT_LENGTH) {
+                value = enforceStringLength(options).filter(Boolean)
+            } else {
+                value = options
+            }
+
+            return this.addBlock("bulleted_list_item", value);
         },
 
         /**
@@ -676,7 +723,15 @@ export function createNotion() {
          * @see block.numbered_list_item.createBlock for full documentation
          */
         numberedListItem(options) {
-            return this.addBlock("numbered_list_item", options);
+            let value
+
+            if (typeof options === "string" && options.length > CONSTANTS.MAX_TEXT_LENGTH) {
+                value = enforceStringLength(options).filter(Boolean)
+            } else {
+                value = options
+            }
+
+            return this.addBlock("numbered_list_item", value);
         },
 
         /**
@@ -694,7 +749,15 @@ export function createNotion() {
          * @see block.to_do.createBlock for full documentation
          */
         toDo(options) {
-            return this.addBlock("to_do", options);
+            let value
+
+            if (typeof options === "string" && options.length > CONSTANTS.MAX_TEXT_LENGTH) {
+                value = enforceStringLength(options).filter(Boolean)
+            } else {
+                value = options
+            }
+            
+            return this.addBlock("to_do", value);
         },
 
         /**
@@ -703,7 +766,15 @@ export function createNotion() {
          * @see block.toggle.createBlock for full documentation
          */
         toggle(options) {
-            return this.addBlock("toggle", options);
+            let value
+
+            if (typeof options === "string" && options.length > CONSTANTS.MAX_TEXT_LENGTH) {
+                value = enforceStringLength(options).filter(Boolean)
+            } else {
+                value = options
+            }
+            
+            return this.addBlock("toggle", value);
         },
 
         /**
@@ -712,7 +783,15 @@ export function createNotion() {
          * @see block.code.createBlock for full documentation
          */
         code(options) {
-            return this.addBlock("code", options);
+            let value
+
+            if (typeof options === "string" && options.length > CONSTANTS.MAX_TEXT_LENGTH) {
+                value = enforceStringLength(options).filter(Boolean)
+            } else {
+                value = options
+            }
+            
+            return this.addBlock("code", value);
         },
 
         /**
@@ -721,7 +800,15 @@ export function createNotion() {
          * @see block.quote.createBlock for full documentation
          */
         quote(options) {
-            return this.addBlock("quote", options);
+            let value
+
+            if (typeof options === "string" && options.length > CONSTANTS.MAX_TEXT_LENGTH) {
+                value = enforceStringLength(options).filter(Boolean)
+            } else {
+                value = options
+            }
+            
+            return this.addBlock("quote", value);
         },
 
         /**
@@ -730,7 +817,15 @@ export function createNotion() {
          * @see block.callout.createBlock for full documentation
          */
         callout(options) {
-            return this.addBlock("callout", options);
+            let value
+
+            if (typeof options === "string" && options.length > CONSTANTS.MAX_TEXT_LENGTH) {
+                value = enforceStringLength(options).filter(Boolean)
+            } else {
+                value = options
+            }
+
+            return this.addBlock("callout", value);
         },
 
         /**
