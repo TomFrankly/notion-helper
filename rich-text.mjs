@@ -23,6 +23,9 @@ export function buildRichTextObj(input, annotations = {}, url, type = "text") {
                             content: input,
                             link: url ? { url: url } : null,
                         },
+                        annotations: {
+                            ...annotations
+                        }
                     },
                 ];
             case "equation":
