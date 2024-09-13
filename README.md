@@ -6,6 +6,8 @@ This library is mainly built to help you create pages and blocks without writing
 
 All functions and methods have [JSDoc](https://jsdoc.app/) markup to support IntelliSense.
 
+Check out the [library's website](https://notion-helper.framer.website/) for additional examples.
+
 [Full documentation on all functions can methods can be found here.](https://tomfrankly.github.io/notion-helper/)
 
 ## Installation
@@ -302,7 +304,11 @@ It returns an object with one or two properties:
 - `content`: The constructed page object, property object, or children array
 - `additionalBlocks`: If you constructed a `children` array with more than 100 blocks, this property will contain an array of arrays, each with up to 100 blocks (not including the first 100, which can be send in the initial request as part of `content`.)
 
-This function has methods for all supported Notion property types, block types, and page meta types, and provides shorthand names for all of them. It also provides generic methods:
+This function has methods for all supported Notion property types, block types, and page meta types, and provides shorthand names for all of them.
+
+When creating blocks, it will perform length-checks on strings passed to the block methods. `paragraph()` will split strings over the 2,000-character limit into multiple paragraph blocks. All other rich-text blocks (headings, lists, quotes, callouts, etc) will split strings over 2,000 characters into multiple rich_text objects, but will keep them in the same block.
+
+It also provides generic methods:
 
 - `property()`
 - `addBlock()`
