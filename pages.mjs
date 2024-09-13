@@ -248,7 +248,7 @@ export function createNotion() {
     function chunkBlocks(blocks, chunkSize = CONSTANTS.MAX_BLOCKS) {
         const chunkedBlocks = [];
         for (let i = 0; i < blocks.length; i += chunkSize) {
-            chunkBlocks.push(blocks.slice(i, i + chunkSize));
+            chunkedBlocks.push(blocks.slice(i, i + chunkSize));
         }
         return chunkBlocks;
     }
