@@ -250,7 +250,7 @@ export function createNotion() {
         for (let i = 0; i < blocks.length; i += chunkSize) {
             chunkedBlocks.push(blocks.slice(i, i + chunkSize));
         }
-        return chunkBlocks;
+        return chunkedBlocks;
     }
 
     resetBuilder();
