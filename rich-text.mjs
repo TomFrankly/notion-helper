@@ -80,6 +80,8 @@ export function buildRichTextObj(input, annotations = {}, url, type = "text") {
     throw new Error(error);
 }
 
+// TODO: Run everything passed to enforceRichText through enforceStringLength
+
 /**
  * Enforces Rich Text format for content.
  * @param {string|Object|Array} content - The content to be enforced as Rich Text.
