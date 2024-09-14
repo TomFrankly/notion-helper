@@ -224,7 +224,7 @@ export function createNotion() {
         hasPageId,
         hasBlockId,
         hasProperty,
-        hasBlock;
+        hasBlock,
         nullParent;
 
     /**
