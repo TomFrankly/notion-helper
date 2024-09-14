@@ -268,10 +268,10 @@ export function createNotion() {
      */
     function removeNullProps(propertyObj) {
         for (let key in propertyObj) {
-            if (typeof obj[key] === "object" && obj[key] !== null) {
-                const subKeys = Object.keys(obj[key])
-                if (subKeys.length === 1 && obj[key][subKeys[0]] === null) {
-                    delete obj[key]
+            if (typeof propertyObj[key] === "object" && propertyObj[key] !== null) {
+                const subKeys = Object.keys(propertyObj[key])
+                if (subKeys.length === 1 && propertyObj[key][subKeys[0]] === null) {
+                    delete propertyObj[key]
                 }
             }
         }
