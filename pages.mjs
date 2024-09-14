@@ -225,6 +225,7 @@ export function createNotion() {
         hasBlockId,
         hasProperty,
         hasBlock;
+        nullParent;
 
     /**
      * Resets the builder to its initial state.
@@ -240,6 +241,7 @@ export function createNotion() {
         hasPageParent = false;
         hasProperty = false;
         hasBlock = false;
+        nullParent = false;
     }
 
     /**
@@ -255,6 +257,24 @@ export function createNotion() {
             chunkedBlocks.push(blocks.slice(i, i + chunkSize));
         }
         return chunkedBlocks;
+    }
+
+    /**
+     * Removes keys from the property object if their object's only key is null.
+     * Essentially removes props that were created, but with null values.
+     * 
+     * @private
+     * @param {Object} propertyObj - a property object
+     */
+    function removeNullProps(propertyObj) {
+        for (let key in propertyObj) {
+            if (typeof obj[key] === "object" && obj[key] !== null) {
+                const subKeys = Object.keys(obj[key])
+                if (subKeys.length === 1 && obj[key][subKeys[0]] === null) {
+                    delete obj[key]
+                }
+            }
+        }
     }
 
     resetBuilder();
@@ -333,6 +353,10 @@ export function createNotion() {
          * @returns {this} The builder instance for method chaining.
          */
         cover(url) {
+            if (url === undefined || url === null || url === "") {
+                return this
+            }
+
             data.cover = page_meta.cover.createMeta(url);
             return this;
         },
@@ -343,6 +367,10 @@ export function createNotion() {
          * @returns {this} The builder instance for method chaining.
          */
         icon(url) {
+            if (url === undefined || url === null || url === "") {
+                return this
+            }
+
             data.icon = page_meta.icon.createMeta(url);
             return this;
         },
@@ -374,9 +402,11 @@ export function createNotion() {
          * @returns {this} The builder instance for method chaining.
          */
         title(name, value) {
-            data.properties[name] = page_props.title.setProp(value);
-            hasProperty = true;
-            return this;
+            if (value === undefined || value === null) {
+                return this
+            } else {
+                return this.property(name, "title", value)
+            }
         },
 
         /**
@@ -386,9 +416,11 @@ export function createNotion() {
          * @returns {this} The builder instance for method chaining.
          */
         richText(name, value) {
-            data.properties[name] = page_props.rich_text.setProp(value);
-            hasProperty = true;
-            return this;
+            if (value === undefined || value === null) {
+                return this
+            } else {
+                return this.property(name, "rich_text", value)
+            }
         },
 
         /**
@@ -398,9 +430,11 @@ export function createNotion() {
          * @returns {this} The builder instance for method chaining.
          */
         checkbox(name, value) {
-            data.properties[name] = page_props.checkbox.setProp(value);
-            hasProperty = true;
-            return this;
+            if (value === undefined || value === null) {
+                return this
+            } else {
+                return this.property(name, "checkbox", value)
+            }
         },
 
         /**
@@ -411,9 +445,13 @@ export function createNotion() {
          * @returns {this} The builder instance for method chaining.
          */
         date(name, start, end = null) {
-            data.properties[name] = page_props.date.setProp(start, end);
-            hasProperty = true;
-            return this;
+            if (start === undefined || start === null) {
+                return this
+            } else {
+                data.properties[name] = page_props.date.setProp(start, end);
+                hasProperty = true;
+                return this;
+            }
         },
 
         /**
@@ -423,9 +461,11 @@ export function createNotion() {
          * @returns {this} The builder instance for method chaining.
          */
         email(name, value) {
-            data.properties[name] = page_props.email.setProp(value);
-            hasProperty = true;
-            return this;
+            if (value === undefined || value === null) {
+                return this
+            } else {
+                return this.property(name, "email", value)
+            }
         },
 
         /**
@@ -434,26 +474,29 @@ export function createNotion() {
          * NOTE: The separate file() method creates a file block.
          *
          * @param {string} name - The name of the property.
-         * @param {Array} fileArray - An array of file objects.
+         * @param {(string|Array)} files - An array of file objects, or a url string
          * @returns {this} The builder instance for method chaining.
          */
-        files(name, fileArray) {
-            data.properties[name] = page_props.files.setProp(fileArray);
-            hasProperty = true;
-            return this;
+        files(name, files) {
+            if (files === undefined || files === null) {
+                return this
+            } else {
+                return this.property(name, "files", files)
+            }
         },
 
         /**
          * Sets a multi-select property value for the page.
          * @param {string} name - The name of the property.
-         * @param {Array} valuesArray - An array of selected values.
+         * @param {(string|Array)} values - A string or array of values.
          * @returns {this} The builder instance for method chaining.
          */
-        multiSelect(name, valuesArray) {
-            data.properties[name] =
-                page_props.multi_select.setProp(valuesArray);
-            hasProperty = true;
-            return this;
+        multiSelect(name, values) {
+            if (values === undefined || values === null) {
+                return this
+            } else {
+                return this.property(name, "multi_select", values)
+            }
         },
 
         /**
@@ -463,21 +506,25 @@ export function createNotion() {
          * @returns {this} The builder instance for method chaining.
          */
         number(name, value) {
-            data.properties[name] = page_props.number.setProp(value);
-            hasProperty = true;
-            return this;
+            if (value === undefined || value === null) {
+                return this
+            } else {
+                return this.property(name, "number", value)
+            }
         },
 
         /**
          * Sets a people property value for the page.
          * @param {string} name - The name of the property.
-         * @param {Array} personArray - An array of person IDs.
+         * @param {(string|Array)} people - A person ID string or array of person IDs.
          * @returns {this} The builder instance for method chaining.
          */
-        people(name, personArray) {
-            data.properties[name] = page_props.people.setProp(personArray);
-            hasProperty = true;
-            return this;
+        people(name, people) {
+            if (people === undefined || people === null) {
+                return this
+            } else {
+                return this.property(name, "people", people)
+            }
         },
 
         /**
@@ -487,21 +534,25 @@ export function createNotion() {
          * @returns {this} The builder instance for method chaining.
          */
         phoneNumber(name, value) {
-            data.properties[name] = page_props.phone_number.setProp(value);
-            hasProperty = true;
-            return this;
+            if (value === undefined || value === null) {
+                return this
+            } else {
+                return this.property(name, "phone_number", value)
+            }
         },
 
         /**
          * Sets a relation property value for the page.
          * @param {string} name - The name of the property.
-         * @param {Array} pageArray - An array of related page IDs.
+         * @param {(string|Array)} pages - A page ID or an array of page IDs.
          * @returns {this} The builder instance for method chaining.
          */
-        relation(name, pageArray) {
-            data.properties[name] = page_props.relation.setProp(pageArray);
-            hasProperty = true;
-            return this;
+        relation(name, pages) {
+            if (pages === undefined || pages === null) {
+                return this
+            } else {
+                return this.property(name, "relation", pages)
+            }
         },
 
         /**
@@ -511,9 +562,11 @@ export function createNotion() {
          * @returns {this} The builder instance for method chaining.
          */
         select(name, value) {
-            data.properties[name] = page_props.select.setProp(value);
-            hasProperty = true;
-            return this;
+            if (value === undefined || value === null) {
+                return this
+            } else {
+                return this.property(name, "select", value)
+            }
         },
 
         /**
@@ -523,9 +576,11 @@ export function createNotion() {
          * @returns {this} The builder instance for method chaining.
          */
         status(name, value) {
-            data.properties[name] = page_props.status.setProp(value);
-            hasProperty = true;
-            return this;
+            if (value === undefined || value === null) {
+                return this
+            } else {
+                return this.property(name, "status", value)
+            }
         },
 
         /**
@@ -535,9 +590,11 @@ export function createNotion() {
          * @returns {this} The builder instance for method chaining.
          */
         url(name, value) {
-            data.properties[name] = page_props.url.setProp(value);
-            hasProperty = true;
-            return this;
+            if (value === undefined || value === null) {
+                return this
+            } else {
+                return this.property(name, "url", value)
+            }
         },
 
         // Block Methods
@@ -555,6 +612,8 @@ export function createNotion() {
          */
         startParent(blockType, options = {}) {
             if (options === undefined || options === null || Object.keys(options).length < 1) {
+                console.warn(`Parent block started without a value. Calling endParent() may result in an error.`)
+                nullParent = true
                 return this
             }
             
@@ -597,6 +656,11 @@ export function createNotion() {
          *       .endParent();
          */
         endParent() {
+            if (nullParent == true) {
+                nullParent = false
+                return this
+            }
+
             if (currentBlockStack.length > 1) {
                 currentBlockStack.pop();
                 nestingLevel--;
@@ -973,6 +1037,10 @@ export function createNotion() {
                 content: null,
                 additionalBlocks: [],
             };
+
+            if (hasProperty) {
+                removeNullProps(data.properties)
+            }
 
             if (hasPageParent) {
                 if (data.children.length > CONSTANTS.MAX_BLOCKS) {
