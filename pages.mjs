@@ -554,6 +554,10 @@ export function createNotion() {
          *       .endParent();
          */
         startParent(blockType, options = {}) {
+            if (options === undefined || options === null || Object.keys(options).length < 1) {
+                return this
+            }
+            
             if (nestingLevel > 2) {
                 const error = `Nesting level exceeded. Requests can only have 2 levels of nested child blocks.`;
                 console.error(error);
@@ -613,6 +617,10 @@ export function createNotion() {
          * notion.paragraph('This is a paragraph.');
          */
         addBlock(blockType, options = {}) {
+            if (options === undefined || options === null || Object.keys(options).length < 1) {
+                return this
+            }
+            
             const newBlock = block[blockType].createBlock(options);
             currentBlockStack[currentBlockStack.length - 1].children.push(
                 newBlock
@@ -926,6 +934,10 @@ export function createNotion() {
          * @returns {this} The builder instance for method chaining.
          */
         loop(blockTypeOrCallback, arr) {
+            if (arr === undefined || arr === null || arr.length < 1) {
+                return this
+            }
+            
             if (typeof blockTypeOrCallback === 'function') {
                 arr.forEach((element, index) => {
                     blockTypeOrCallback(this, element, index)
