@@ -225,7 +225,7 @@ export function createNotion() {
         hasBlockId,
         hasProperty,
         hasBlock,
-        nullParent;
+        nullParent
 
     /**
      * Resets the builder to its initial state.
