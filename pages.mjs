@@ -97,8 +97,8 @@ export function quickPages({ parent, parent_type, pages, schema, childrenFn }) {
                 id: parent,
                 type: parent_type,
             }),
-            ...(icon && page_meta.icon.createMeta(icon)),
-            ...(cover && page_meta.cover.createMeta(cover)),
+            ...(icon && { icon: page_meta.icon.createMeta(icon) }),
+            ...(cover && { cover: page_meta.cover.createMeta(cover) }),
         };
 
         const validatedSchema = Object.fromEntries(

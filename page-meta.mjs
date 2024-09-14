@@ -46,9 +46,7 @@ export const page_meta = {
          * @param {string} page_id - The ID of the page.
          * @returns {string} A string-validated page ID.
          */
-        createMeta: (page_id) => ({
-            page_id: validateValue(page_id),
-        }),
+        createMeta: (page_id) => validateValue(page_id),
     },
 
     /**
@@ -65,9 +63,7 @@ export const page_meta = {
          * @param {string} block_id - The ID of the block.
          * @returns {string} A string-validated block ID.
          */
-        createMeta: (block_id) => ({
-            block_id: validateValue(block_id),
-        }),
+        createMeta: (block_id) => validateValue(block_id),
     },
 
     /**
@@ -84,9 +80,7 @@ export const page_meta = {
          * @param {string} property_id - The ID of the property.
          * @returns {string} A string-validated property ID.
          */
-        createMeta: (property_id) => ({
-            propety_id: validateValue(property_id),
-        }),
+        createMeta: (property_id) => validateValue(property_id),
     },
 
     /**
@@ -103,9 +97,7 @@ export const page_meta = {
          * @param {string} value - The icon value (URL for "external" or emoji character).
          * @returns {Object} An icon metadata object.
          */
-        createMeta: (value) => ({
-            icon: setIcon(value),
-        }),
+        createMeta: (value) => setIcon(value),
     },
 
     /**
@@ -122,9 +114,7 @@ export const page_meta = {
          * @param {string} value - The URL of the cover image.
          * @returns {Object} A cover metadata object.
          */
-        createMeta: (value) => ({
-            cover: setIcon(value),
-        }),
+        createMeta: (value) => setIcon(value),
     },
 };
 
