@@ -528,7 +528,7 @@ The `block` object lets you create most supported block types while writing less
 
 _Some block types will return a `null` if they are provided with invalid input. You should filter `null` entries out of your `children` array before adding it to an API call._
 
-Each block type has a createBlock() method you can call, which takes an object containing properties specific to that block type. Most take `content`, which is an array of Rich Text objects you can easily create with `builtRichTextObj()`. You can also pass a single string or an array of strings in `content`, or just pass a string or array of strings as the sole argument. Notion-Helper will coerce strings to rich text objects where needed.
+Each block type has a createBlock() method you can call, which takes an object containing properties specific to that block type. Most take `rich_text`, which is an array of Rich Text objects you can easily create with `builtRichTextObj()`. You can also pass a single string or an array of strings in `rich_text`, or just pass a string or array of strings as the sole argument. Notion-Helper will coerce strings to rich text objects where needed.
 
 Examples:
 
@@ -536,7 +536,7 @@ Examples:
 const headerText = "How to Play Guitar with Your Teeth";
 
 const heading1 = NotionHelper.block.heading_1.createBlock({
-  content: buildRichTextObj(headerText),
+  rich_text: buildRichTextObj(headerText),
 });
 ```
 

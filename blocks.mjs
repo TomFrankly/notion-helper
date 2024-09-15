@@ -98,7 +98,7 @@ export const block = {
          *
          * @function
          * @param {string|string[]|Object} options - A string, an array of strings, or an options object representing the list item content.
-         * @param {string|string[]|Array<Object>} [options.content=[]] - The content as a string, an array of strings, or an array of rich text objects.
+         * @param {string|string[]|Array<Object>} [options.rich_text=[]] - The item's content as a string, an array of strings, or an array of rich text objects.
          * @param {Array<Object>} [options.children=[]] - An array of child block objects.
          * @param {string} [options.color="default"] - Color for the text.
          * @returns {Object} A bulleted list item block object compatible with Notion's API.
@@ -111,7 +111,7 @@ export const block = {
          *
          * // Use with options object
          * const complexItem = block.bulleted_list_item.createBlock({
-         *   content: "Complex item",
+         *   rich_text: "Complex item",
          *   color: "red",
          *   children: [
          *     // Child blocks would go here
@@ -119,18 +119,18 @@ export const block = {
          * });
          */
         createBlock(options) {
-            let content, children, color;
+            let rich_text, children, color;
             if (typeof options === "string" || Array.isArray(options)) {
-                content = options;
+                rich_text = options;
                 children = [];
                 color = "default";
             } else {
-                ({ content = [], children = [], color = "default" } = options);
+                ({ rich_text = [], children = [], color = "default" } = options);
             }
             return {
                 type: "bulleted_list_item",
                 bulleted_list_item: {
-                    rich_text: enforceRichText(content),
+                    rich_text: enforceRichText(rich_text),
                     color: color,
                     ...(children.length > 0 && { children }),
                 },
@@ -152,7 +152,7 @@ export const block = {
          *
          * @function
          * @param {string|string[]|Object} options - A string, an array of strings, or an options object representing the callout content.
-         * @param {string|string[]|Array<Object>} [options.content=[]] - The content as a string, an array of strings, or an array of rich text objects.
+         * @param {string|string[]|Array<Object>} [options.rich_text=[]] - The content as a string, an array of strings, or an array of rich text objects.
          * @param {string} [options.icon=""] - An optional icon value (URL for "external" or emoji character for "emoji").
          * @param {Array<Object>} [options.children=[]] - An array of child block objects.
          * @param {string} [options.color="default"] - Color for the callout background.
@@ -163,7 +163,7 @@ export const block = {
          *
          * // Use with options object
          * const complexCallout = block.callout.createBlock({
-         *   content: "Now make like a tree and get outta here.",
+         *   rich_text: "Now make like a tree and get outta here.",
          *   icon: "💡",
          *   color: "blue_background",
          *   children: [
@@ -172,15 +172,15 @@ export const block = {
          * });
          */
         createBlock: (options) => {
-            let content, icon, children, color;
+            let rich_text, icon, children, color;
             if (typeof options === "string" || Array.isArray(options)) {
-                content = options;
+                rich_text = options;
                 icon = "";
                 children = [];
                 color = "default";
             } else {
                 ({
-                    content = [],
+                    rich_text = [],
                     icon = "",
                     children = [],
                     color = "default",
@@ -189,7 +189,7 @@ export const block = {
             return {
                 type: "callout",
                 callout: {
-                    rich_text: enforceRichText(content),
+                    rich_text: enforceRichText(rich_text),
                     icon: setIcon(icon),
                     color: color,
                     ...(children.length > 0 && { children }),
@@ -212,7 +212,7 @@ export const block = {
          *
          * @function
          * @param {string|Object} options - A string representing the code content, or an options object.
-         * @param {string|string[]|Array<Object>} [options.content=[]] - The code content as a string, an array of strings, or an array of rich text objects.
+         * @param {string|string[]|Array<Object>} [options.rich_text=[]] - The code content as a string, an array of strings, or an array of rich text objects.
          * @param {string|string[]|Array<Object>} [options.caption=[]] - The caption as a string, an array of strings, or an array of rich text objects.
          * @param {string} [options.language="plain text"] - Programming language of the code block.
          * @returns {Object} A code block object compatible with Notion's API.
@@ -222,20 +222,20 @@ export const block = {
          *
          * // Use with options object
          * const complexCode = block.code.createBlock({
-         *   content: "const name = 'Monkey D. Luffy'\n    console.log(`My name is ${name} and I will be king of the pirates!`)",
+         *   rich_text: "const name = 'Monkey D. Luffy'\n    console.log(`My name is ${name} and I will be king of the pirates!`)",
          *   language: "JavaScript",
          *   caption: "A simple JavaScript greeting function"
          * });
          */
         createBlock: (options) => {
-            let content, caption, language;
+            let rich_text, caption, language;
             if (typeof options === "string") {
-                content = options;
+                rich_text = options;
                 caption = [];
                 language = "plain text";
             } else {
                 ({
-                    content = [],
+                    rich_text = [],
                     caption = [],
                     language = "plain text",
                 } = options);
@@ -243,7 +243,7 @@ export const block = {
             return {
                 type: "code",
                 code: {
-                    rich_text: enforceRichText(content),
+                    rich_text: enforceRichText(rich_text),
                     caption: enforceRichText(caption),
                     language: language,
                 },
@@ -393,7 +393,7 @@ export const block = {
          *
          * @function
          * @param {string|string[]|Object} options - A string, an array of strings, or an options object representing the heading content.
-         * @param {string|string[]|Array<Object>} [options.content=[]] - The content as a string, an array of strings, or an array of rich text objects.
+         * @param {string|string[]|Array<Object>} [options.rich_text=[]] - The content as a string, an array of strings, or an array of rich text objects.
          * @param {string} [options.color="default"] - Color for the heading text.
          * @param {boolean} [options.is_toggleable=false] - Whether the heading is toggleable.
          * @param {Array<Object>} [options.children=[]] - An array of child block objects.
@@ -404,7 +404,7 @@ export const block = {
          *
          * // Use with options object
          * const complexHeading = block.heading_1.createBlock({
-         *   content: "Complex Heading",
+         *   rich_text: "Complex Heading",
          *   color: "red",
          *   is_toggleable: true,
          *   children: [
@@ -413,15 +413,15 @@ export const block = {
          * });
          */
         createBlock: (options) => {
-            let content, color, is_toggleable, children;
+            let rich_text, color, is_toggleable, children;
             if (typeof options === "string" || Array.isArray(options)) {
-                content = options;
+                rich_text = options;
                 color = "default";
                 is_toggleable = false;
                 children = [];
             } else {
                 ({
-                    content = [],
+                    rich_text = [],
                     color = "default",
                     is_toggleable = false,
                     children = [],
@@ -430,7 +430,7 @@ export const block = {
             return {
                 type: "heading_1",
                 heading_1: {
-                    rich_text: enforceRichText(content),
+                    rich_text: enforceRichText(rich_text),
                     color: color,
                     is_toggleable: is_toggleable,
                     ...(children.length > 0 && { children }),
@@ -458,7 +458,7 @@ export const block = {
          *
          * @function
          * @param {string|string[]|Object} options - A string, an array of strings, or an options object representing the heading content.
-         * @param {string|string[]|Array<Object>} [options.content=[]] - The content as a string, an array of strings, or an array of rich text objects.
+         * @param {string|string[]|Array<Object>} [options.rich_text=[]] - The content as a string, an array of strings, or an array of rich text objects.
          * @param {string} [options.color="default"] - Color for the heading text.
          * @param {boolean} [options.is_toggleable=false] - Whether the heading is toggleable.
          * @param {Array<Object>} [options.children=[]] - An array of child block objects.
@@ -469,7 +469,7 @@ export const block = {
          *
          * // Use with options object
          * const complexHeading = block.heading_2.createBlock({
-         *   content: "Complex Heading",
+         *   rich_text: "Complex Heading",
          *   color: "red",
          *   is_toggleable: true,
          *   children: [
@@ -478,15 +478,15 @@ export const block = {
          * });
          */
         createBlock: (options) => {
-            let content, color, is_toggleable, children;
+            let rich_text, color, is_toggleable, children;
             if (typeof options === "string" || Array.isArray(options)) {
-                content = options;
+                rich_text = options;
                 color = "default";
                 is_toggleable = false;
                 children = [];
             } else {
                 ({
-                    content = [],
+                    rich_text = [],
                     color = "default",
                     is_toggleable = false,
                     children = [],
@@ -495,7 +495,7 @@ export const block = {
             return {
                 type: "heading_2",
                 heading_2: {
-                    rich_text: enforceRichText(content),
+                    rich_text: enforceRichText(rich_text),
                     color: color,
                     is_toggleable: is_toggleable,
                     ...(children.length > 0 && { children }),
@@ -523,7 +523,7 @@ export const block = {
          *
          * @function
          * @param {string|string[]|Object} options - A string, an array of strings, or an options object representing the heading content.
-         * @param {string|string[]|Array<Object>} [options.content=[]] - The content as a string, an array of strings, or an array of rich text objects.
+         * @param {string|string[]|Array<Object>} [options.rich_text=[]] - The content as a string, an array of strings, or an array of rich text objects.
          * @param {string} [options.color="default"] - Color for the heading text.
          * @param {boolean} [options.is_toggleable=false] - Whether the heading is toggleable.
          * @param {Array<Object>} [options.children=[]] - An array of child block objects.
@@ -534,7 +534,7 @@ export const block = {
          *
          * // Use with options object
          * const complexHeading = block.heading_3.createBlock({
-         *   content: "Complex Heading",
+         *   rich_text: "Complex Heading",
          *   color: "red",
          *   is_toggleable: true,
          *   children: [
@@ -543,15 +543,15 @@ export const block = {
          * });
          */
         createBlock: (options) => {
-            let content, color, is_toggleable, children;
+            let rich_text, color, is_toggleable, children;
             if (typeof options === "string" || Array.isArray(options)) {
-                content = options;
+                rich_text = options;
                 color = "default";
                 is_toggleable = false;
                 children = [];
             } else {
                 ({
-                    content = [],
+                    rich_text = [],
                     color = "default",
                     is_toggleable = false,
                     children = [],
@@ -560,7 +560,7 @@ export const block = {
             return {
                 type: "heading_3",
                 heading_3: {
-                    rich_text: enforceRichText(content),
+                    rich_text: enforceRichText(rich_text),
                     color: color,
                     is_toggleable: is_toggleable,
                     ...(children.length > 0 && { children }),
@@ -640,7 +640,7 @@ export const block = {
          *
          * @function
          * @param {string|string[]|Object} options - A string, an array of strings, or an options object representing the list item content.
-         * @param {string|string[]|Array<Object>} [options.content=[]] - The content as a string, an array of strings, or an array of rich text objects.
+         * @param {string|string[]|Array<Object>} [options.rich_text=[]] - The content as a string, an array of strings, or an array of rich text objects.
          * @param {Array<Object>} [options.children=[]] - An array of child block objects.
          * @param {string} [options.color="default"] - Color for the text.
          * @returns {Object} A numbered list item block object compatible with Notion's API.
@@ -653,7 +653,7 @@ export const block = {
          *
          * // Use with options object
          * const complexItem = block.numbered_list_item.createBlock({
-         *   content: "Complex item",
+         *   rich_text: "Complex item",
          *   color: "red",
          *   children: [
          *     // Child blocks would go here
@@ -661,18 +661,18 @@ export const block = {
          * });
          */
         createBlock: (options) => {
-            let content, children, color;
+            let rich_text, children, color;
             if (typeof options === "string" || Array.isArray(options)) {
-                content = options;
+                rich_text = options;
                 children = [];
                 color = "default";
             } else {
-                ({ content = [], children = [], color = "default" } = options);
+                ({ rich_text = [], children = [], color = "default" } = options);
             }
             return {
                 type: "numbered_list_item",
                 numbered_list_item: {
-                    rich_text: enforceRichText(content),
+                    rich_text: enforceRichText(rich_text),
                     color: color,
                     ...(children.length > 0 && { children }),
                 },
@@ -697,7 +697,7 @@ export const block = {
          *
          * @function
          * @param {string|string[]|Object} options - A string, an array of strings, or an options object representing the paragraph content.
-         * @param {string|string[]|Array<Object>} [options.content=[]] - The content as a string, an array of strings, or an array of rich text objects.
+         * @param {string|string[]|Array<Object>} [options.rich_text=[]] - The content as a string, an array of strings, or an array of rich text objects.
          * @param {Array<Object>} [options.children=[]] - An array of child block objects.
          * @param {string} [options.color="default"] - Color for the text.
          * @returns {Object} A paragraph block object compatible with Notion's API.
@@ -710,7 +710,7 @@ export const block = {
          *
          * // Usage with options object
          * const complexParagraph = block.paragraph.createBlock({
-         *   content: "Complex paragraph",
+         *   rich_text: "Complex paragraph",
          *   color: "red",
          *   children: [
          *     // Child blocks would go here
@@ -718,18 +718,18 @@ export const block = {
          * });
          */
         createBlock: (options) => {
-            let content, children, color;
+            let rich_text, children, color;
             if (typeof options === "string" || Array.isArray(options)) {
-                content = options;
+                rich_text = options;
                 children = [];
                 color = "default";
             } else {
-                ({ content = [], children = [], color = "default" } = options);
+                ({ rich_text = [], children = [], color = "default" } = options);
             }
             return {
                 type: "paragraph",
                 paragraph: {
-                    rich_text: enforceRichText(content),
+                    rich_text: enforceRichText(rich_text),
                     color: color,
                     ...(children.length > 0 && { children }),
                 },
@@ -808,7 +808,7 @@ export const block = {
          *
          * @function
          * @param {string|string[]|Object} options - A string, an array of strings, or an options object representing the quote content.
-         * @param {string|string[]|Array<Object>} [options.content=[]] - The content as a string, an array of strings, or an array of rich text objects.
+         * @param {string|string[]|Array<Object>} [options.rich_text=[]] - The content as a string, an array of strings, or an array of rich text objects.
          * @param {Array<Object>} [options.children=[]] - An array of child block objects.
          * @param {string} [options.color="default"] - Color for the text.
          * @returns {Object} A quote block object compatible with Notion's API.
@@ -821,7 +821,7 @@ export const block = {
          *
          * // Use with options object
          * const complexQuote = block.quote.createBlock({
-         *   content: "Complex quote",
+         *   rich_text: "Complex quote",
          *   color: "gray",
          *   children: [
          *     // Child blocks would go here
@@ -829,18 +829,18 @@ export const block = {
          * });
          */
         createBlock: (options) => {
-            let content, children, color;
+            let rich_text, children, color;
             if (typeof options === "string" || Array.isArray(options)) {
-                content = options;
+                rich_text = options;
                 children = [];
                 color = "default";
             } else {
-                ({ content = [], children = [], color = "default" } = options);
+                ({ rich_text = [], children = [], color = "default" } = options);
             }
             return {
                 type: "quote",
                 quote: {
-                    rich_text: enforceRichText(content),
+                    rich_text: enforceRichText(rich_text),
                     color: color,
                     ...(children.length > 0 && { children }),
                 },
@@ -935,9 +935,9 @@ export const block = {
          *
          * // Use with an array of rich text objects
          * const complexRow = block.table_row.createBlock([
-         *   [{ type: "text", text: { content: "Cell 1" } }],
-         *   [{ type: "text", text: { content: "Cell 2", annotations: { bold: true } } }],
-         *   [{ type: "text", text: { content: "Cell 3" } }]
+         *   [{ type: "text", text: { rich_text: "Cell 1" } }],
+         *   [{ type: "text", text: { rich_text: "Cell 2", annotations: { bold: true } } }],
+         *   [{ type: "text", text: { rich_text: "Cell 3" } }]
          * ]);
          */
         createBlock: (cells = []) => ({
@@ -1010,7 +1010,7 @@ export const block = {
          *
          * @function
          * @param {string|string[]|Object} options - A string, an array of strings, or an options object representing the to-do content.
-         * @param {string|string[]|Array<Object>} [options.content=[]] - The content as a string, an array of strings, or an array of rich text objects.
+         * @param {string|string[]|Array<Object>} [options.rich_text=[]] - The content as a string, an array of strings, or an array of rich text objects.
          * @param {boolean} [options.checked=false] - Whether the to-do item is checked.
          * @param {Array<Object>} [options.children=[]] - An array of child block objects.
          * @param {string} [options.color="default"] - Color for the to-do text.
@@ -1021,7 +1021,7 @@ export const block = {
          *
          * // Use with options object
          * const complexToDo = block.to_do.createBlock({
-         *   content: "Complex task",
+         *   rich_text: "Complex task",
          *   checked: true,
          *   color: "green",
          *   children: [
@@ -1030,15 +1030,15 @@ export const block = {
          * });
          */
         createBlock: (options) => {
-            let content, checked, children, color;
+            let rich_text, checked, children, color;
             if (typeof options === "string" || Array.isArray(options)) {
-                content = options;
+                rich_text = options;
                 checked = false;
                 children = [];
                 color = "default";
             } else {
                 ({
-                    content = [],
+                    rich_text = [],
                     checked = false,
                     children = [],
                     color = "default",
@@ -1047,7 +1047,7 @@ export const block = {
             return {
                 type: "to_do",
                 to_do: {
-                    rich_text: enforceRichText(content),
+                    rich_text: enforceRichText(rich_text),
                     checked: checked,
                     color: color,
                     ...(children.length > 0 && { children }),
@@ -1073,7 +1073,7 @@ export const block = {
          *
          * @function
          * @param {string|string[]|Object} options - A string, an array of strings, or an options object representing the toggle content.
-         * @param {string|string[]|Array<Object>} [options.content=[]] - The content as a string, an array of strings, or an array of rich text objects.
+         * @param {string|string[]|Array<Object>} [options.rich_text=[]] - The content as a string, an array of strings, or an array of rich text objects.
          * @param {Array<Object>} [options.children=[]] - An array of child block objects.
          * @param {string} [options.color="default"] - Color for the toggle text.
          * @returns {Object} A toggle block object compatible with Notion's API.
@@ -1083,7 +1083,7 @@ export const block = {
          *
          * // Use with options object
          * const complexToggle = block.toggle.createBlock({
-         *   content: "Complex toggle",
+         *   rich_text: "Complex toggle",
          *   color: "blue",
          *   children: [
          *     // Child blocks would go here
@@ -1091,18 +1091,18 @@ export const block = {
          * });
          */
         createBlock: (options) => {
-            let content, children, color;
+            let rich_text, children, color;
             if (typeof options === "string" || Array.isArray(options)) {
-                content = options;
+                rich_text = options;
                 children = [];
                 color = "default";
             } else {
-                ({ content = [], children = [], color = "default" } = options);
+                ({ rich_text = [], children = [], color = "default" } = options);
             }
             return {
                 type: "toggle",
                 toggle: {
-                    rich_text: enforceRichText(content),
+                    rich_text: enforceRichText(rich_text),
                     color: color,
                     ...(children.length > 0 && { children }),
                 },
@@ -1210,7 +1210,7 @@ export function bullet(options) {
 /**
  * Creates a callout block.
  * @memberof BlockShorthand
- * @param {string|string[]|Object} options - A string, an array of strings, or an options object representing the callout content.
+ * @param {string|string[]|Object} options - A string, an array of strings, or an options object representing the content.
  * @see block.callout for full documentation
  * @returns {Object} A callout block.
  */
@@ -1456,6 +1456,6 @@ export function makeParagraphBlocks(strings) {
 
     /* Create a Paragraph block for each Rich Text Object */
     return richTextObjects.map((richText) =>
-        block.paragraph.createBlock({ content: richText })
+        block.paragraph.createBlock({ rich_text: richText })
     );
 }
