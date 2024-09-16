@@ -393,23 +393,11 @@ export function createNotion({ strict = false } = {}) {
 
             if (name === undefined || name === null || type === undefined || type === null || value === undefined || value === null) {
                 if (strict === true) {
-                    const error = `Null or invalid property name, type, or value provided. 
-                    
-                    Name: ${name}
-                    Type: ${type}
-                    Value: ${value}
-                    
-                    Strict mode is enabled, so cannot construct property object. Disable strict mode in createNotion() to simply ignore this property method call.`
+                    const error = `Null or invalid property name, type, or value provided.\n\nName: ${name}\nType: ${type}\nValue: ${value}\n\nStrict mode is enabled, so cannot construct property object. Disable strict mode in createNotion() to simply ignore this property method call.`
                     console.error(error)
                     throw new Error(error)
                 } else {
-                    console.warn(`Null or invalid property name, type, or value provided. 
-                    
-                    Name: ${name}
-                    Type: ${type}
-                    Value: ${value}
-                    
-                    This method call will be ignored. You can instead cause createNotion() to throw an error in instance like these by calling createNotion(strict = true).`)
+                    console.warn(`Null or invalid property name, type, or value provided.\n\nName: ${name}\nType: ${type}\nValue: ${value}\n\nThis method call will be ignored. You can instead cause createNotion() to throw an error in instance like these by calling createNotion(strict = true)`)
                     return this
                 }
             }
@@ -637,21 +625,11 @@ export function createNotion({ strict = false } = {}) {
         startParent(blockType, options = {}) {
             if (blockType === undefined || blockType === null || options === undefined || options === null || Object.keys(options).length < 1) {
                 if (strict === true) {
-                    const error = `Null/undefined block type, or null/undefined options provided to startParent():
-                    
-                    Block type: ${blockType}
-                    Options: ${options}
-                    
-                    Strict mode is enabled, so this method is throwing an error. You can call createNotion() without the strict argument if you'd just like this method call to be ignored instead.`
+                    const error = `Null/undefined block type, or null/undefined options provided to startParent():\n\nBlock type: ${blockType}\nOptions: ${options}\n\nStrict mode is enabled, so this method is throwing an error. You can call createNotion() without the strict argument if you\'d just like this method call to be ignored instead.`
                     console.error(error)
                     throw new Error(error)
                 } else {
-                    const warning = `Null/undefined block type, or null/undefined options provided to startParent():
-                    
-                    Block type: ${blockType}
-                    Options: ${options}
-                    
-                    Strict mode is disabled, so this method call will simply be ignored. Calling endparent() may result in an error, though the library will try to prevent this.`
+                    const warning = `Null/undefined block type, or null/undefined options provided to startParent():\n\nBlock type: ${blockType}\nOptions: ${options}\n\nStrict mode is disabled, so this method call will simply be ignored. Calling endparent() may result in an error, though the library will try to prevent this.`
                     console.warn(warning)
                     nullParent = true
                     return this
@@ -724,21 +702,11 @@ export function createNotion({ strict = false } = {}) {
         addBlock(blockType, options = {}) {
             if (blockType === undefined || blockType === null || options === undefined || options === null || Object.keys(options).length < 1) {
                 if (strict === true) {
-                    const error = `Null/undefined block type, or null/undefined options provided to addBlock():
-                    
-                    Block type: ${blockType}
-                    Options: ${options}
-                    
-                    Strict mode is enabled, so this method is throwing an error. You can call createNotion() without the strict argument if you'd just like this method call to be ignored instead.`
+                    const error = `Null/undefined block type, or null/undefined options provided to addBlock():\n\nBlock type: ${blockType}\nOptions: ${options}\n\nStrict mode is enabled, so this method is throwing an error. You can call createNotion() without the strict argument if you\'d just like this method call to be ignored instead.`
                     console.error(error)
                     throw new Error(error)
                 } else {
-                    const warning = `Null/undefined block type, or null/undefined options provided to addBlock():
-                    
-                    Block type: ${blockType}
-                    Options: ${options}
-                    
-                    Strict mode is disabled, so this method call will simply be ignored.`
+                    const warning = `Null/undefined block type, or null/undefined options provided to addBlock():\n\nBlock type: ${blockType}\nOptions: ${options}\n\nStrict mode is disabled, so this method call will simply be ignored.`
                     console.warn(warning)
                     nullParent = true
                     return this
