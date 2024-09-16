@@ -216,7 +216,7 @@ export function quickPages({ parent, parent_type, pages, schema, childrenFn }) {
  * // Create a page in Notion with the result (assumes you've installed and imported the Notion SDK and instantiated a client bound to a 'notion' variable)
  * const response = await notion.pages.create(result.content)
  */
-export function createNotion(strict = false) {
+export function createNotion({ strict = false } = {}) {
     let data,
         currentBlockStack,
         nestingLevel,
