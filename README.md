@@ -498,6 +498,12 @@ const response = notion.pages.create(builder.content);
 
 </details>
 
+By default, `createNotion()` will try to smoothly handle null/undefined values passed to its methods, returning `this` and effectively ignoring the method call. This can be helpful when you're looping over an array of objects with inconsistent keys, or handling user input where even specific properties may or may not be defined by the user.
+
+However, you can call `createNotion(strict = true)` if you'd like to enable strict mode. When enabled, null/undefined block types, property names, property types, and property/block values passed will cause the function to throw an error.
+
+---
+
 Notion-Helper also provides objects with methods for quickly creating pages and blocks:
 
 ### `block`

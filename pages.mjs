@@ -1,5 +1,5 @@
 import { buildRichTextObj, enforceRichText } from "./rich-text.mjs";
-import { makeParagraphBlocks } from "./blocks.mjs";
+import { bookmark, makeParagraphBlocks } from "./blocks.mjs";
 import { page_meta, page_props } from "./page-meta.mjs";
 import { block } from "./blocks.mjs";
 import CONSTANTS from "./constants.mjs";
@@ -216,7 +216,7 @@ export function quickPages({ parent, parent_type, pages, schema, childrenFn }) {
  * // Create a page in Notion with the result (assumes you've installed and imported the Notion SDK and instantiated a client bound to a 'notion' variable)
  * const response = await notion.pages.create(result.content)
  */
-export function createNotion() {
+export function createNotion(strict = false) {
     let data,
         currentBlockStack,
         nestingLevel,
@@ -390,6 +390,30 @@ export function createNotion() {
                 console.error(error);
                 throw new Error(error);
             }
+
+            if (name === undefined || name === null || type === undefined || type === null || value === undefined || value === null) {
+                if (strict === true) {
+                    const error = `Null or invalid property name, type, or value provided. 
+                    
+                    Name: ${name}
+                    Type: ${type}
+                    Value: ${value}
+                    
+                    Strict mode is enabled, so cannot construct property object. Disable strict mode in createNotion() to simply ignore this property method call.`
+                    console.error(error)
+                    throw new Error(error)
+                } else {
+                    console.warn(`Null or invalid property name, type, or value provided. 
+                    
+                    Name: ${name}
+                    Type: ${type}
+                    Value: ${value}
+                    
+                    This method call will be ignored. You can instead cause createNotion() to throw an error in instance like these by calling createNotion(strict = true).`)
+                    return this
+                }
+            }
+
             data.properties[name] = page_props[type].setProp(value);
             hasProperty = true;
             return this;
@@ -611,10 +635,27 @@ export function createNotion() {
          *       .endParent();
          */
         startParent(blockType, options = {}) {
-            if (options === undefined || options === null || Object.keys(options).length < 1) {
-                console.warn(`Parent block started without a value. Calling endParent() may result in an error.`)
-                nullParent = true
-                return this
+            if (blockType === undefined || blockType === null || options === undefined || options === null || Object.keys(options).length < 1) {
+                if (strict === true) {
+                    const error = `Null/undefined block type, or null/undefined options provided to startParent():
+                    
+                    Block type: ${blockType}
+                    Options: ${options}
+                    
+                    Strict mode is enabled, so this method is throwing an error. You can call createNotion() without the strict argument if you'd just like this method call to be ignored instead.`
+                    console.error(error)
+                    throw new Error(error)
+                } else {
+                    const warning = `Null/undefined block type, or null/undefined options provided to startParent():
+                    
+                    Block type: ${blockType}
+                    Options: ${options}
+                    
+                    Strict mode is disabled, so this method call will simply be ignored. Calling endparent() may result in an error, though the library will try to prevent this.`
+                    console.warn(warning)
+                    nullParent = true
+                    return this
+                }
             }
             
             if (nestingLevel > 2) {
@@ -681,8 +722,27 @@ export function createNotion() {
          * notion.paragraph('This is a paragraph.');
          */
         addBlock(blockType, options = {}) {
-            if (options === undefined || options === null || Object.keys(options).length < 1) {
-                return this
+            if (blockType === undefined || blockType === null || options === undefined || options === null || Object.keys(options).length < 1) {
+                if (strict === true) {
+                    const error = `Null/undefined block type, or null/undefined options provided to addBlock():
+                    
+                    Block type: ${blockType}
+                    Options: ${options}
+                    
+                    Strict mode is enabled, so this method is throwing an error. You can call createNotion() without the strict argument if you'd just like this method call to be ignored instead.`
+                    console.error(error)
+                    throw new Error(error)
+                } else {
+                    const warning = `Null/undefined block type, or null/undefined options provided to addBlock():
+                    
+                    Block type: ${blockType}
+                    Options: ${options}
+                    
+                    Strict mode is disabled, so this method call will simply be ignored.`
+                    console.warn(warning)
+                    nullParent = true
+                    return this
+                }
             }
             
             const newBlock = block[blockType].createBlock(options);
