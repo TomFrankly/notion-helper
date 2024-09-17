@@ -337,91 +337,100 @@ export const page_props = {
         /**
          * Sets a files property's value.
          * @function
-         * @param {(string|Array<string>|Array<{name: string, url: string})>} fileArray - A url string, or an array of url strings, or an array of file objects.
+         * @param {(string|Array<string|Array<string>|Object>|Object)} files - A url string, an array of url strings, an array of [url, name] arrays, an array of file objects, or a single file object. File objects can be simple ({ name, url }) or fully constructed ({ name, external: { url }})
+         * @param {string} [fileName] - a name for a singular file. Used if a string value is passed for the files parameter. If not provided, the file's URL will be used for the name.
          * @returns {Object} A files property object.
          */
-        setProp: (files) => {
-            if (typeof files === "string") {
-                // string case
-                if (!validateValue(files, "url")) {
-                    return {
-                        files: null,
-                    };
-                } else {
-                    return {
-                        files: [
-                            {
-                                external: {
-                                    url: validateValue(files, "url"),
-                                },
+        setProp: (files, fileName) => {
+            const processFile = (file) => {
+                if (typeof file === "string") {
+                    if (!validateValue(file, "url")) {
+                        return null;
+                    } else {
+                        return {
+                            name:
+                                fileName && fileName !== ""
+                                    ? validateValue(fileName, "string")
+                                    : validateValue(file, "string"),
+                            external: {
+                                url: validateValue(file, "url"),
                             },
-                        ],
-                    };
+                        };
+                    }
+                } else if (Array.isArray(file) && file.length === 2) {
+                    const [url, name] = file;
+                    if (!validateValue(url, "url")) {
+                        return null;
+                    } else {
+                        return {
+                            name: validateValue(name, "string")
+                                ? validateValue(name, "string")
+                                : validateValue(url, "url"),
+                            external: {
+                                url: validateValue(url, "url"),
+                            },
+                        };
+                    }
+                } else if (typeof file === "object") {
+                    if (file.external && file.external.url) {
+                        if (!validateValue(file.external.url, "url")) {
+                            return null;
+                        } else {
+                            return {
+                                name: validateValue(file.name, "string")
+                                    ? validateValue(file.name, "string")
+                                    : validateValue(
+                                          file.external.url,
+                                          "string"
+                                      ),
+                                external: {
+                                    url: validateValue(
+                                        file.external.url,
+                                        "url"
+                                    ),
+                                },
+                            };
+                        }
+                    } else if (file.url) {
+                        if (!validateValue(file.url, "url")) {
+                            return null;
+                        } else {
+                            return {
+                                name: validateValue(file.name, "string")
+                                    ? validateValue(file.name, "string")
+                                    : validateValue(file.url, "string"),
+                                external: {
+                                    url: validateValue(file.url, "url"),
+                                },
+                            };
+                        }
+                    }
                 }
+
+                return null;
+            };
+
+            let fileObjects;
+
+            if (typeof files === "string") {
+                fileObjects = [processFile(files)];
             } else if (Array.isArray(files)) {
-                if (files.every((file) => typeof file === "object")) {
-                    // array of file objects
-                    const fileObjects = files
-                        .map((file) => {
-                            if (!file.url || !validateValue(file.url, "url")) {
-                                return null;
-                            } else {
-                                return {
-                                    ...(file.name &&
-                                        file.name !== "" && {
-                                            name: validateValue(
-                                                file.name,
-                                                "string"
-                                            ),
-                                        }),
-                                    external: {
-                                        url: validateValue(file.url, "url"),
-                                    },
-                                };
-                            }
-                        })
-                        .filter(Boolean);
-
-                    if (fileObjects.length < 1) {
-                        return {
-                            files: null,
-                        };
-                    } else {
-                        return {
-                            files: fileObjects,
-                        };
-                    }
-                } else {
-                    // array of url strings
-                    const fileObjects = files
-                        .map((file) => {
-                            if (!validateValue(file, "url")) {
-                                return null;
-                            } else {
-                                return {
-                                    external: {
-                                        url: validateValue(file, "url"),
-                                    },
-                                };
-                            }
-                        })
-                        .filter(Boolean);
-
-                    if (fileObjects.length < 1) {
-                        return {
-                            files: null,
-                        };
-                    } else {
-                        return {
-                            files: fileObjects,
-                        };
-                    }
-                }
+                fileObjects = files.map(processFile).filter(Boolean);
+            } else if (typeof files === "object") {
+                fileObjects = [processFile(files)];
             } else {
                 return {
                     files: null,
                 };
             }
+
+            return fileObjects.length > 0
+                ? {
+                      files: fileObjects,
+                  }
+                : {
+                      files: null,
+                  };
         },
     },
 
@@ -502,34 +511,43 @@ export const page_props = {
         /**
          * Sets a people property's value.
          * @function
-         * @param {(string|string[])} values - A single person ID or an array of person IDs.
+         * @param {(string|Array<string|Object>)} values - A single person ID, an array of person IDs, an array of user objects, or a single user object.
          * @returns {Object} A people property object.
          */
         setProp: (values) => {
-            if (typeof values === "string") {
-                // single string case
-                const person = validateValue(values, "string");
-                return {
-                    people: person ? [{ object: "user", id: person }] : null,
-                };
-            } else if (Array.isArray(values)) {
-                // array case
-                const people = values
-                    .map((value) => {
-                        const person = validateValue(value, "string");
-                        return person ? { object: "user", id: person } : null;
-                    })
-                    .filter(Boolean);
+            const processUser = (value) => {
+                if (typeof value === "string") {
+                    const person = validateValue(value, "string");
+                    return person ? { object: "user", id: person } : null;
+                } else if (typeof value === "object" && value !== null) {
+                    if (value.id && value.id !== "") {
+                        return {
+                            object: "user",
+                            id: value,
+                        };
+                    }
+                }
 
-                return {
-                    people: people.length > 0 ? people : null,
-                };
+                return null;
+            };
+
+            let people;
+
+            if (typeof values === "string") {
+                people = [processUser(values)];
+            } else if (Array.isArray(values)) {
+                people = values.map(processUser).filter(Boolean);
+            } else if (typeof values === "object" && values !== null) {
+                people = [processUser(values)];
             } else {
-                // invalid input
                 return {
                     people: null,
                 };
             }
+
+            return {
+                people: people.length > 0 ? people : null,
+            };
         },
     },
 
@@ -565,31 +583,41 @@ export const page_props = {
         /**
          * Sets a relation property's value.
          * @function
-         * @param {(string|string[])} values - A single page ID or an array of page IDs.
+         * @param {(string|Array<string|Object>)} values - A single page ID, an array of page IDs, an array of page objects, or a single page object.
          * @returns {Object} A relation property object.
          */
         setProp: (values) => {
-            if (typeof values === "string") { // single string case
-                const page = validateValue(values, "string");
-                return {
-                    relation: page ? [{ id: page }] : null,
-                };
-            } else if (Array.isArray(values)) { // array case
-                const pages = values
-                    .map((value) => {
-                        const page = validateValue(value, "string");
-                        return page ? { id: page } : null;
-                    })
-                    .filter(Boolean);
+            const processRelation = (value) => {
+                if (typeof value === "string") {
+                    const page = validateValue(value, "string");
+                    return page ? { id: page } : null;
+                } else if (typeof value === "object") {
+                    if (value.id) {
+                        return { id: validateValue(value.id, "string") };
+                    }
+                }
+                return null;
+            };
 
-                return {
-                    relation: pages.length > 0 ? pages : null,
-                };
-            } else { // invalid input
-                return {
-                    relation: null,
-                };
+            let relations;
+
+            if (typeof values === "string") {
+                // Single string case
+                relations = [processRelation(values)];
+            } else if (Array.isArray(values)) {
+                // Array case
+                relations = values.map(processRelation).filter(Boolean);
+            } else if (typeof values === "object") {
+                // Single object case
+                relations = [processRelation(values)];
+            } else {
+                // Invalid input
+                return { relation: null };
             }
+
+            return {
+                relation: relations.length > 0 ? relations : null,
+            };
         },
     },
 
