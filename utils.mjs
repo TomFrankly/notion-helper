@@ -52,9 +52,9 @@ export function validateImageURL(url) {
 export function validateVideoURL(url) {
     try {
         const supportedFormats = CONSTANTS.VIDEO_SUPPORT.FORMATS.join("|");
-        const formatRegex = new RegExp(`\\.(${supportedFormats})$`, i);
+        const formatRegex = new RegExp(`\\.(${supportedFormats})$`, 'i');
         const supportedSites = CONSTANTS.VIDEO_SUPPORT.SITES.join("|");
-        const siteRegex = new RegExp(`(${supportedSites})`, i);
+        const siteRegex = new RegExp(`(${supportedSites})`, 'i');
         return (
             (formatRegex.test(url) || siteRegex.test(url)) && isValidURL(url)
         );
@@ -71,7 +71,7 @@ export function validateVideoURL(url) {
  */
 export function validatePDFURL(url) {
     try {
-        const formatRegex = new RegExp(`\\.pdf$`, i);
+        const formatRegex = new RegExp(`\\.pdf$`, 'i');
         return formatRegex.test(url) && isValidURL(url);
     } catch (e) {
         return false;

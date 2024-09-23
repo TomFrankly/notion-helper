@@ -1,11 +1,12 @@
-import { buildRichTextObj, enforceRichText } from "./rich-text.mjs";
-import { bookmark, makeParagraphBlocks } from "./blocks.mjs";
+import { buildRichTextObj } from "./rich-text.mjs";
+import { makeParagraphBlocks } from "./blocks.mjs";
 import { page_meta, page_props } from "./page-meta.mjs";
 import { block } from "./blocks.mjs";
 import CONSTANTS from "./constants.mjs";
 import { enforceStringLength } from "./utils.mjs";
 
 // TODO - allow passing in a Notion db response in order to validate against the db itself
+// TODO - allow passing in a request callback function so the library can make API requests for you
 // TODO - probably split out schema validation as its own function
 
 /**
@@ -1122,6 +1123,17 @@ export function createNotion({ strict = false } = {}) {
 
             resetBuilder();
             return result;
+        },
+
+        /**
+         * Creates a new page in Notion using user-provided callback functions for page creation and block-append operations.
+         * 
+         * @param {*} creationCallback 
+         * @param {*} appendCallback 
+         */
+        createPage(creationCallback, appendCallback) {
+            // Call this.build() directly if possible
+            // Should use underlying API methods for creation and appending
         },
 
         /**
