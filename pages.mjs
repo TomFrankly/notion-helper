@@ -217,7 +217,7 @@ export function quickPages({ parent, parent_type, pages, schema, childrenFn }) {
  * // Create a page in Notion with the result (assumes you've installed and imported the Notion SDK and instantiated a client bound to a 'notion' variable)
  * const response = await notion.pages.create(result.content)
  */
-export function createNotion({ strict = false } = {}) {
+export function createNotion({ strict = false, nestingLimit = 2 } = {}) {
     let data,
         currentBlockStack,
         nestingLevel,
@@ -637,8 +637,8 @@ export function createNotion({ strict = false } = {}) {
                 }
             }
             
-            if (nestingLevel > 2) {
-                const error = `Nesting level exceeded. Requests can only have 2 levels of nested child blocks.`;
+            if (nestingLevel > nestingLimit) {
+                const error = `Nesting level exceeded. Requests can only have ${nestingLimit} levels of nested child blocks.`;
                 console.error(error);
                 throw new Error(error);
             }
