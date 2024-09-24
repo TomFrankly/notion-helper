@@ -29,7 +29,7 @@ import {
 import { setIcon } from "./emoji-and-files.mjs";
 import { page_meta, page_props, parentDb, parentPage, pageId, blockId, propertyId, cover, icon, title, richText, checkbox, date, email, files, multiSelect, number, people, phoneNumber, relation, select, status, url } from "./page-meta.mjs";
 import { quickPages, createNotion } from "./pages.mjs";
-import { request, createPage, appendBlocks } from "./requests";
+import { request, createPage, appendBlocks } from "./requests.mjs";
 
 export {
     buildRichTextObj,
