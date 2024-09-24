@@ -289,8 +289,6 @@ export const request = {
                         return null;
                     }
 
-                    apiCallCount = 0;
-
                     let allResponses = [];
 
                     try {
@@ -416,11 +414,25 @@ export const request = {
                 }
 
                 const append = async (options) => {
-                    const responses = await appendInternal(options);
-                    return {
-                        apiResponses: responses,
-                        apiCallCount: apiCallCount,
-                    };
+                    apiCallCount = 0;
+                    try {
+                        const responses = await appendInternal(options);
+                        return {
+                            apiResponses: responses,
+                            apiCallCount: apiCallCount,
+                        };
+                    } catch (error) {
+                        console.error(`Encountered error while appending block children: ${error}`)
+                        return {
+                            apiResponses: null,
+                            apiCallCount: apiCallCount,
+                            error: error.message
+                        }
+                    }
+                };
+
+                append.resetApiCallCount = () => {
+                    apiCallCount = 0;
                 };
 
                 return append;
@@ -465,17 +477,17 @@ export const request = {
  *      .richText("Category", "Lizard Pokémon")
  *      .quote("Obviously prefers hot places. When it rains, steam is said to spout from the tip of its tail.")
  *      .build()
- * 
+ *
  * const result = await createPage({
  *   data: page.content,
  *   client: notion
  * });
- * 
+ *
  * // Using with custom API call function
  * const customApiCall = async (data) => {
  *   // Your custom API call implementation
  * };
- * 
+ *
  * const result = await createPage({
  *   data: page.content,
  *   apiCall: customApiCall,
@@ -484,7 +496,7 @@ export const request = {
  * });
  */
 export function createPage(options) {
-    return request.pages.create(options)
+    return request.pages.create(options);
 }
 
 /**
@@ -503,18 +515,18 @@ export function createPage(options) {
  * // Using with Notion SDK client
  * const notion = new Client({ auth: NOTION_TOKEN });
  * const childBlocks = createNotion().paragraph("A paragraph").build()
- * 
+ *
  * const { apiResponses, apiCallCount } = await appendBlocks({
  *   block_id: 'your-block-id',
  *   children: childBlocks.content,
  *   client: notion
  * });
- * 
+ *
  * // Using with custom API call function (using ky)
  * import ky from 'ky';
- * 
+ *
  * const NOTION_TOKEN = 'your-notion-token';
- * 
+ *
  * const customApiCall = async (block_id, children) => {
  *   const response = await ky.patch(
  *     `https://api.notion.com/v1/blocks/${block_id}/children`,
@@ -528,9 +540,9 @@ export function createPage(options) {
  *   ).json();
  *   return response;
  * };
- * 
+ *
  * const childBlocks = createNotion().paragraph("Hello, World!").build();
- * 
+ *
  * const { apiResponses, apiCallCount } = await appendBlocks({
  *   block_id: 'your-block-id',
  *   children: childBlocks.content,
@@ -538,5 +550,5 @@ export function createPage(options) {
  * });
  */
 export function appendBlocks(options) {
-    return request.blocks.children.append(options)
+    return request.blocks.children.append(options);
 }
