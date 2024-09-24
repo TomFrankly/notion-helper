@@ -538,5 +538,5 @@ export function createPage(options) {
  * });
  */
 export function appendBlocks(options) {
-    return request.pages.create(options)
+    return request.blocks.children.append(options)
 }

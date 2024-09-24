@@ -176,10 +176,6 @@ export function quickPages({ parent, parent_type, pages, schema, childrenFn }) {
 /**
  * A builder object for Notion content.
  * @typedef {Object} NotionBuilder
- * 
- * @property {function(string): this} parentDb - Sets the parent database for the page.
- * @property {function(string): this} parentPage - Sets the parent page for the page.
- * // Add more properties here for each method in the builder
  */
 
 /**
@@ -197,6 +193,9 @@ export function quickPages({ parent, parent_type, pages, schema, childrenFn }) {
  *
  * @namespace
  * @function createNotion
+ * @param {boolean} [strict=false] If true, the builder will throw errors when passed invalid or null data. Otherwise, it will try to gracefully return, and strip out, null properties and blocks.
+ * @param {number} [nestingLimit=2] Defines the number of nested levels of children arrays the final object can have. Defaults to 2, which is the limit for a single Notion API request.
+ * @param {boolean} [limitChildren=true] If true, the final content object's children array will have a maximum of 100 blocks, and the rest will be put into the additionalBlocks array in chunks of 100. If false, the content object will contain all child blocks.
  * @returns {NotionBuilder} A builder object with methods for constructing and managing Notion content. The builder includes methods to set page and property details, add various block types, manage nested structures, and ultimately build Notion-compatible objects.
  *
  * @example
@@ -217,7 +216,7 @@ export function quickPages({ parent, parent_type, pages, schema, childrenFn }) {
  * // Create a page in Notion with the result (assumes you've installed and imported the Notion SDK and instantiated a client bound to a 'notion' variable)
  * const response = await notion.pages.create(result.content)
  */
-export function createNotion({ strict = false, nestingLimit = 2 } = {}) {
+export function createNotion({ strict = false, nestingLimit = 2, limitChildren = true } = {}) {
     let data,
         currentBlockStack,
         nestingLevel,
@@ -1072,7 +1071,7 @@ export function createNotion({ strict = false, nestingLimit = 2 } = {}) {
             }
 
             if (hasPageParent) {
-                if (data.children.length > CONSTANTS.MAX_BLOCKS) {
+                if (limitChildren === true && data.children.length > CONSTANTS.MAX_BLOCKS) {
                     const chunkedBlocks = chunkBlocks(data.children);
                     data.children = chunkedBlocks[0];
                     result.additionalBlocks = chunkedBlocks.slice(1);
@@ -1080,7 +1079,7 @@ export function createNotion({ strict = false, nestingLimit = 2 } = {}) {
                 const { parent, ...rest } = data;
                 result.content = parent ? { parent, ...rest } : data;
             } else if (hasPageId) {
-                if (data.children.length > CONSTANTS.MAX_BLOCKS) {
+                if (limitChildren === true && data.children.length > CONSTANTS.MAX_BLOCKS) {
                     const chunkedBlocks = chunkBlocks(data.children);
                     data.children = chunkedBlocks[0];
                     result.additionalBlocks = chunkedBlocks.slice(1);
@@ -1088,7 +1087,7 @@ export function createNotion({ strict = false, nestingLimit = 2 } = {}) {
                 const { page_id, ...rest } = data;
                 result.content = page_id ? { page_id, ...rest } : data;
             } else if (hasBlockId) {
-                if (data.children.length > CONSTANTS.MAX_BLOCKS) {
+                if (limitChildren === true && data.children.length > CONSTANTS.MAX_BLOCKS) {
                     const chunkedBlocks = chunkBlocks(data.children);
                     data.children = chunkedBlocks[0];
                     result.additionalBlocks = chunkedBlocks.slice(1);
@@ -1098,7 +1097,7 @@ export function createNotion({ strict = false, nestingLimit = 2 } = {}) {
             } else if (hasProperty && !hasBlock) {
                 result.content = data.properties;
             } else if (hasBlock && !hasProperty) {
-                if (data.children.length > CONSTANTS.MAX_BLOCKS) {
+                if (limitChildren === true && data.children.length > CONSTANTS.MAX_BLOCKS) {
                     const chunkedBlocks = chunkBlocks(data.children);
                     result.content = chunkedBlocks[0];
                     result.additionalBlocks = chunkedBlocks.slice(1);
@@ -1109,7 +1108,7 @@ export function createNotion({ strict = false, nestingLimit = 2 } = {}) {
                 console.warn(
                     `Properties and blocks were added, so a full page object will be returned. However, it has no parent page or database specified.`
                 );
-                if (data.children.length > CONSTANTS.MAX_BLOCKS) {
+                if (limitChildren === true && data.children.length > CONSTANTS.MAX_BLOCKS) {
                     const chunkedBlocks = chunkBlocks(data.children);
                     data.children = chunkedBlocks[0];
                     result.additionalBlocks = chunkedBlocks.slice(1);
