@@ -62,7 +62,7 @@ export const block = {
          *   caption: ["Flylighter is a web clipper for Notion...", "...and Obsidian, too."]
          * });
          */
-        createBlock(options) {
+        createBlock: (options) => {
             let url, caption;
             if (typeof options === "string") {
                 url = options;
@@ -118,7 +118,7 @@ export const block = {
          *   ]
          * });
          */
-        createBlock(options) {
+        createBlock: (options) => {
             let rich_text, children, color;
             if (typeof options === "string" || Array.isArray(options)) {
                 rich_text = options;
