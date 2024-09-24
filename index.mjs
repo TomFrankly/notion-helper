@@ -24,16 +24,20 @@ import {
     tableOfContents,
     toDo,
     toggle,
-    video
+    video,
 } from "./blocks.mjs"
 import { setIcon } from "./emoji-and-files.mjs";
 import { page_meta, page_props, parentDb, parentPage, pageId, blockId, propertyId, cover, icon, title, richText, checkbox, date, email, files, multiSelect, number, people, phoneNumber, relation, select, status, url } from "./page-meta.mjs";
 import { quickPages, createNotion } from "./pages.mjs";
+import { request, createPage, appendBlocks } from "./requests";
 
 export {
     buildRichTextObj,
     makeParagraphBlocks,
     block,
+    request,
+    createPage,
+    appendBlocks,
     setIcon,
     page_meta,
     page_props,
@@ -89,7 +93,10 @@ const NotionHelper = {
     buildRichTextObj,
     makeParagraphBlocks,
     block,
+    request,
     setIcon,
+    createPage,
+    appendBlocks,
     page_meta,
     page_props,
     quickPages,
