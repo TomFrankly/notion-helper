@@ -110,7 +110,7 @@ export function enforceRichText(content) {
         const richTextObjects = strings.flatMap((string) => {
             const isURL = isValidURL(string);
             const isBold = /^\*{2}[\s\S]*?\*{2}$/.test(string);
-            const isItalic = /^[\*_]{1}[\s\S]*?[\*_]{1}$/.test(string);
+            const isItalic = /^[\*_]{1}[^\*_]{1}[\s\S]*?[^\*_]{1}[\*_]{1}$/.test(string);
             const isBoldItalic = /^\*{3}[\s\S]*?\*{3}$/.test(string);
 
             let plainString = string;
