@@ -1,15 +1,15 @@
-import { enforceStringLength } from "./utils.mjs";
+import { enforceStringLength, isValidURL } from "./utils.mjs";
 
 /**
  * Builds a Rich Text Object. See: https://developers.notion.com/reference/rich-text
  * @param {(string|Object)} input - The text content or input object. If string, the input can be normal text or an equation. If object, it can be a text, equation, or mention object.
- * @param {Object} opts - Options for the Annotation object.
- * @param {boolean} opts.bold - Bold text
- * @param {boolean} opts.italic - Italic text
- * @param {boolean} opts.strikethrough - Strikethrough text
- * @param {boolean} opts.underline - Underlined text
- * @param {boolean} opts.code - Code-style text
- * @param {string} opts.color - String specifying the text's color or background color. Opts: "blue", "brown", "default", "gray", "green", "orange", "pink", "purple", "red", "yellow". All except "default" can also be used as a background color with "[color]_background" - example: "blue_background". See: https://developers.notion.com/reference/rich-text#the-annotation-object
+ * @param {Object} annotations - Options for the Annotation object.
+ * @param {boolean} annotations.bold - Bold text
+ * @param {boolean} annotations.italic - Italic text
+ * @param {boolean} annotations.strikethrough - Strikethrough text
+ * @param {boolean} annotations.underline - Underlined text
+ * @param {boolean} annotations.code - Code-style text
+ * @param {string} annotations.color - String specifying the text's color or background color. Opts: "blue", "brown", "default", "gray", "green", "orange", "pink", "purple", "red", "yellow". All except "default" can also be used as a background color with "[color]_background" - example: "blue_background". See: https://developers.notion.com/reference/rich-text#the-annotation-object
  * @param {string} url - The URL for this object, if any. Creates a clickable link.
  * @param {string} [type=text] - An optional type for the Rich Text Object. Supports text, equation, and mention.
  * @returns {Array<Object>} - Array with a single Rich Text Object
@@ -26,8 +26,8 @@ export function buildRichTextObj(input, annotations = {}, url, type = "text") {
                             link: url ? { url: url } : null,
                         },
                         annotations: {
-                            ...annotations
-                        }
+                            ...annotations,
+                        },
                     },
                 ];
             case "equation":
@@ -100,17 +100,39 @@ export function enforceRichText(content) {
     if (Array.isArray(content)) {
         return content.flatMap((item) =>
             typeof item === "string"
-                ? buildRichTextObj(item)
+                ? enforceRichText(item)
                 : enforceRichTextObject(item)
         );
     }
 
     if (typeof content === "string") {
-        return buildRichTextObj(content);
+        const strings = enforceStringLength(content);
+        const richTextObjects = strings.flatMap((string) => {
+            const isURL = isValidURL(string);
+            const isBold = /^\*{2}[\s\S]*?\*{2}$/.test(string);
+            const isItalic = /^[\*_][\s\S]*?[\*_]$/.test(string);
+            const isBoldItalic = /^\*{3}[\s\S]*?\*{3}$/.test(string);
+
+            let plainString = string;
+            if (isBold || isItalic || isBoldItalic) {
+                plainString = string.replace(/^(\*|_)+|(\*|_)+$/g, "");
+            }
+
+            return buildRichTextObj(
+                plainString,
+                {
+                    bold: isBold || isBoldItalic,
+                    italic: isItalic || isBoldItalic,
+                },
+                isURL ? plainString : null
+            );
+        });
+
+        return richTextObjects;
     }
 
     if (typeof content === "number") {
-        return buildRichTextObj(content.toString())
+        return buildRichTextObj(content.toString());
     }
 
     if (typeof content === "object") {

@@ -726,10 +726,13 @@ export const block = {
             } else {
                 ({ rich_text = [], children = [], color = "default" } = options);
             }
+            
             return {
                 type: "paragraph",
                 paragraph: {
-                    rich_text: enforceRichText(rich_text),
+                    rich_text: rich_text === "" 
+                        ? buildRichTextObj("")
+                        : enforceRichText(rich_text),
                     color: color,
                     ...(children.length > 0 && { children }),
                 },

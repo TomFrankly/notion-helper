@@ -7,8 +7,9 @@ import CONSTANTS from "./constants.mjs";
  * @returns {boolean}
  */
 export function isSingleEmoji(string) {
-    const regex = /^\p{Emoji}$/u;
-    return regex.test(string.trim());
+    const trimmedString = string.trim()
+    const regex = /^(?:\p{Emoji_Presentation}|\p{Emoji}\uFE0F)(?:\p{Emoji_Modifier})?$/u;
+    return regex.test(trimmedString);
 }
 
 /**

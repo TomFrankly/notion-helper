@@ -180,15 +180,15 @@ export function quickPages({ parent, parent_type, pages, schema, childrenFn }) {
 
 /**
  * A factory function that provides methods for building Notion objects, including pages, properties, and blocks. It adds an unhealthily-large spoonful of syntactic sugar onto the Notion API.
- * 
+ *
  * Returns an object with two possible properties:
- * 
+ *
  * 1. content (always returned) - can be a full page object, an array of blocks, or a properties object.
- * 
+ *
  * 2. addititionalBlocks - array containing arrays of blocks passed to the builder function that go over Notion's limit for the number of blocks that can be in a children array. This allows you to add these to the returned page or block in further requests.
  *
  * This builder supports chaining methods so you can build pages or structures incrementally. It also supports block-nesting with the startParent() and endParent() methods.
- * 
+ *
  * After adding all your blocks and properties, call build() to return the final object. It can be passed directly as the data object in Notion API requests.
  *
  * @namespace
@@ -196,6 +196,7 @@ export function quickPages({ parent, parent_type, pages, schema, childrenFn }) {
  * @param {boolean} [strict=false] If true, the builder will throw errors when passed invalid or null data. Otherwise, it will try to gracefully return, and strip out, null properties and blocks.
  * @param {number} [nestingLimit=2] Defines the number of nested levels of children arrays the final object can have. Defaults to 2, which is the limit for a single Notion API request.
  * @param {boolean} [limitChildren=true] If true, the final content object's children array will have a maximum of 100 blocks, and the rest will be put into the additionalBlocks array in chunks of 100. If false, the content object will contain all child blocks.
+ * @param {boolean} [allowBlankParagraphs=false] If true, calling .paragraph("") will result in an empty paragraph block being added to the block stack. Otherwise, .paragraph("") will return null, and will be stripped out of the children block array once you call .build()
  * @returns {NotionBuilder} A builder object with methods for constructing and managing Notion content. The builder includes methods to set page and property details, add various block types, manage nested structures, and ultimately build Notion-compatible objects.
  *
  * @example
@@ -212,11 +213,16 @@ export function quickPages({ parent, parent_type, pages, schema, childrenFn }) {
  * // Access the built content and handle additional blocks if they exist
  * console.log(result.content);  // The main Notion page content
  * console.log(result.additionalBlocks);  // Any blocks that need separate requests due to size constraints
- * 
+ *
  * // Create a page in Notion with the result (assumes you've installed and imported the Notion SDK and instantiated a client bound to a 'notion' variable)
  * const response = await notion.pages.create(result.content)
  */
-export function createNotion({ strict = false, nestingLimit = 2, limitChildren = true } = {}) {
+export function createNotion({
+    strict = false,
+    nestingLimit = 2,
+    limitChildren = true,
+    allowBlankParagraphs = false,
+} = {}) {
     let data,
         currentBlockStack,
         nestingLevel,
@@ -225,7 +231,7 @@ export function createNotion({ strict = false, nestingLimit = 2, limitChildren =
         hasBlockId,
         hasProperty,
         hasBlock,
-        nullParent
+        nullParent;
 
     /**
      * Resets the builder to its initial state.
@@ -262,16 +268,22 @@ export function createNotion({ strict = false, nestingLimit = 2, limitChildren =
     /**
      * Removes keys from the property object if their object's only key is null.
      * Essentially removes props that were created, but with null values.
-     * 
+     *
      * @private
      * @param {Object} propertyObj - a property object
      */
     function removeNullProps(propertyObj) {
         for (let key in propertyObj) {
-            if (typeof propertyObj[key] === "object" && propertyObj[key] !== null) {
-                const subKeys = Object.keys(propertyObj[key])
-                if (subKeys.length === 1 && propertyObj[key][subKeys[0]] === null) {
-                    delete propertyObj[key]
+            if (
+                typeof propertyObj[key] === "object" &&
+                propertyObj[key] !== null
+            ) {
+                const subKeys = Object.keys(propertyObj[key]);
+                if (
+                    subKeys.length === 1 &&
+                    propertyObj[key][subKeys[0]] === null
+                ) {
+                    delete propertyObj[key];
                 }
             }
         }
@@ -354,7 +366,7 @@ export function createNotion({ strict = false, nestingLimit = 2, limitChildren =
          */
         cover(url) {
             if (url === undefined || url === null || url === "") {
-                return this
+                return this;
             }
 
             data.cover = page_meta.cover.createMeta(url);
@@ -368,7 +380,7 @@ export function createNotion({ strict = false, nestingLimit = 2, limitChildren =
          */
         icon(url) {
             if (url === undefined || url === null || url === "") {
-                return this
+                return this;
             }
 
             data.icon = page_meta.icon.createMeta(url);
@@ -391,14 +403,23 @@ export function createNotion({ strict = false, nestingLimit = 2, limitChildren =
                 throw new Error(error);
             }
 
-            if (name === undefined || name === null || type === undefined || type === null || value === undefined || value === null) {
+            if (
+                name === undefined ||
+                name === null ||
+                type === undefined ||
+                type === null ||
+                value === undefined ||
+                value === null
+            ) {
                 if (strict === true) {
-                    const error = `Null or invalid property name, type, or value provided.\n\nName: ${name}\nType: ${type}\nValue: ${value}\n\nStrict mode is enabled, so cannot construct property object. Disable strict mode in createNotion() to simply ignore this property method call.`
-                    console.error(error)
-                    throw new Error(error)
+                    const error = `Null or invalid property name, type, or value provided.\n\nName: ${name}\nType: ${type}\nValue: ${value}\n\nStrict mode is enabled, so cannot construct property object. Disable strict mode in createNotion() to simply ignore this property method call.`;
+                    console.error(error);
+                    throw new Error(error);
                 } else {
-                    console.warn(`Null or invalid property name, type, or value provided.\n\nName: ${name}\nType: ${type}\nValue: ${value}\n\nThis method call will be ignored. You can instead cause createNotion() to throw an error in instance like these by calling createNotion(strict = true)`)
-                    return this
+                    console.warn(
+                        `Null or invalid property name, type, or value provided.\n\nName: ${name}\nType: ${type}\nValue: ${value}\n\nThis method call will be ignored. You can instead cause createNotion() to throw an error in instance like these by calling createNotion(strict = true)`
+                    );
+                    return this;
                 }
             }
 
@@ -415,9 +436,9 @@ export function createNotion({ strict = false, nestingLimit = 2, limitChildren =
          */
         title(name, value) {
             if (value === undefined || value === null) {
-                return this
+                return this;
             } else {
-                return this.property(name, "title", value)
+                return this.property(name, "title", value);
             }
         },
 
@@ -429,9 +450,9 @@ export function createNotion({ strict = false, nestingLimit = 2, limitChildren =
          */
         richText(name, value) {
             if (value === undefined || value === null) {
-                return this
+                return this;
             } else {
-                return this.property(name, "rich_text", value)
+                return this.property(name, "rich_text", value);
             }
         },
 
@@ -443,9 +464,9 @@ export function createNotion({ strict = false, nestingLimit = 2, limitChildren =
          */
         checkbox(name, value) {
             if (value === undefined || value === null) {
-                return this
+                return this;
             } else {
-                return this.property(name, "checkbox", value)
+                return this.property(name, "checkbox", value);
             }
         },
 
@@ -458,7 +479,7 @@ export function createNotion({ strict = false, nestingLimit = 2, limitChildren =
          */
         date(name, start, end = null) {
             if (start === undefined || start === null) {
-                return this
+                return this;
             } else {
                 data.properties[name] = page_props.date.setProp(start, end);
                 hasProperty = true;
@@ -474,9 +495,9 @@ export function createNotion({ strict = false, nestingLimit = 2, limitChildren =
          */
         email(name, value) {
             if (value === undefined || value === null) {
-                return this
+                return this;
             } else {
-                return this.property(name, "email", value)
+                return this.property(name, "email", value);
             }
         },
 
@@ -491,9 +512,9 @@ export function createNotion({ strict = false, nestingLimit = 2, limitChildren =
          */
         files(name, files) {
             if (files === undefined || files === null) {
-                return this
+                return this;
             } else {
-                return this.property(name, "files", files)
+                return this.property(name, "files", files);
             }
         },
 
@@ -505,9 +526,9 @@ export function createNotion({ strict = false, nestingLimit = 2, limitChildren =
          */
         multiSelect(name, values) {
             if (values === undefined || values === null) {
-                return this
+                return this;
             } else {
-                return this.property(name, "multi_select", values)
+                return this.property(name, "multi_select", values);
             }
         },
 
@@ -519,9 +540,9 @@ export function createNotion({ strict = false, nestingLimit = 2, limitChildren =
          */
         number(name, value) {
             if (value === undefined || value === null) {
-                return this
+                return this;
             } else {
-                return this.property(name, "number", value)
+                return this.property(name, "number", value);
             }
         },
 
@@ -533,9 +554,9 @@ export function createNotion({ strict = false, nestingLimit = 2, limitChildren =
          */
         people(name, people) {
             if (people === undefined || people === null) {
-                return this
+                return this;
             } else {
-                return this.property(name, "people", people)
+                return this.property(name, "people", people);
             }
         },
 
@@ -547,9 +568,9 @@ export function createNotion({ strict = false, nestingLimit = 2, limitChildren =
          */
         phoneNumber(name, value) {
             if (value === undefined || value === null) {
-                return this
+                return this;
             } else {
-                return this.property(name, "phone_number", value)
+                return this.property(name, "phone_number", value);
             }
         },
 
@@ -561,9 +582,9 @@ export function createNotion({ strict = false, nestingLimit = 2, limitChildren =
          */
         relation(name, pages) {
             if (pages === undefined || pages === null) {
-                return this
+                return this;
             } else {
-                return this.property(name, "relation", pages)
+                return this.property(name, "relation", pages);
             }
         },
 
@@ -575,9 +596,9 @@ export function createNotion({ strict = false, nestingLimit = 2, limitChildren =
          */
         select(name, value) {
             if (value === undefined || value === null) {
-                return this
+                return this;
             } else {
-                return this.property(name, "select", value)
+                return this.property(name, "select", value);
             }
         },
 
@@ -589,9 +610,9 @@ export function createNotion({ strict = false, nestingLimit = 2, limitChildren =
          */
         status(name, value) {
             if (value === undefined || value === null) {
-                return this
+                return this;
             } else {
-                return this.property(name, "status", value)
+                return this.property(name, "status", value);
             }
         },
 
@@ -603,9 +624,9 @@ export function createNotion({ strict = false, nestingLimit = 2, limitChildren =
          */
         url(name, value) {
             if (value === undefined || value === null) {
-                return this
+                return this;
             } else {
-                return this.property(name, "url", value)
+                return this.property(name, "url", value);
             }
         },
 
@@ -623,19 +644,25 @@ export function createNotion({ strict = false, nestingLimit = 2, limitChildren =
          *       .endParent();
          */
         startParent(blockType, options = {}) {
-            if (blockType === undefined || blockType === null || options === undefined || options === null || Object.keys(options).length < 1) {
+            if (
+                blockType === undefined ||
+                blockType === null ||
+                options === undefined ||
+                options === null ||
+                Object.keys(options).length < 1
+            ) {
                 if (strict === true) {
-                    const error = `Null/undefined block type, or null/undefined options provided to startParent():\n\nBlock type: ${blockType}\nOptions: ${options}\n\nStrict mode is enabled, so this method is throwing an error. You can call createNotion() without the strict argument if you\'d just like this method call to be ignored instead.`
-                    console.error(error)
-                    throw new Error(error)
+                    const error = `Null/undefined block type, or null/undefined options provided to startParent():\n\nBlock type: ${blockType}\nOptions: ${options}\n\nStrict mode is enabled, so this method is throwing an error. You can call createNotion() without the strict argument if you\'d just like this method call to be ignored instead.`;
+                    console.error(error);
+                    throw new Error(error);
                 } else {
-                    const warning = `Null/undefined block type, or null/undefined options provided to startParent():\n\nBlock type: ${blockType}\nOptions: ${options}\n\nStrict mode is disabled, so this method call will simply be ignored. Calling endparent() may result in an error, though the library will try to prevent this.`
-                    console.warn(warning)
-                    nullParent = true
-                    return this
+                    const warning = `Null/undefined block type, or null/undefined options provided to startParent():\n\nBlock type: ${blockType}\nOptions: ${options}\n\nStrict mode is disabled, so this method call will simply be ignored. Calling endparent() may result in an error, though the library will try to prevent this.`;
+                    console.warn(warning);
+                    nullParent = true;
+                    return this;
                 }
             }
-            
+
             if (nestingLevel > nestingLimit) {
                 const error = `Nesting level exceeded. Requests can only have ${nestingLimit} levels of nested child blocks.`;
                 console.error(error);
@@ -676,8 +703,8 @@ export function createNotion({ strict = false, nestingLimit = 2, limitChildren =
          */
         endParent() {
             if (nullParent == true) {
-                nullParent = false
-                return this
+                nullParent = false;
+                return this;
             }
 
             if (currentBlockStack.length > 1) {
@@ -700,19 +727,25 @@ export function createNotion({ strict = false, nestingLimit = 2, limitChildren =
          * notion.paragraph('This is a paragraph.');
          */
         addBlock(blockType, options = {}) {
-            if (blockType === undefined || blockType === null || options === undefined || options === null || Object.keys(options).length < 1) {
+            if (
+                blockType === undefined ||
+                blockType === null ||
+                options === undefined ||
+                options === null ||
+                Object.keys(options).length < 1
+            ) {
                 if (strict === true) {
-                    const error = `Null/undefined block type, or null/undefined options provided to addBlock():\n\nBlock type: ${blockType}\nOptions: ${options}\n\nStrict mode is enabled, so this method is throwing an error. You can call createNotion() without the strict argument if you\'d just like this method call to be ignored instead.`
-                    console.error(error)
-                    throw new Error(error)
+                    const error = `Null/undefined block type, or null/undefined options provided to addBlock():\n\nBlock type: ${blockType}\nOptions: ${options}\n\nStrict mode is enabled, so this method is throwing an error. You can call createNotion() without the strict argument if you\'d just like this method call to be ignored instead.`;
+                    console.error(error);
+                    throw new Error(error);
                 } else {
-                    const warning = `Null/undefined block type, or null/undefined options provided to addBlock():\n\nBlock type: ${blockType}\nOptions: ${options}\n\nStrict mode is disabled, so this method call will simply be ignored.`
-                    console.warn(warning)
-                    nullParent = true
-                    return this
+                    const warning = `Null/undefined block type, or null/undefined options provided to addBlock():\n\nBlock type: ${blockType}\nOptions: ${options}\n\nStrict mode is disabled, so this method call will simply be ignored.`;
+                    console.warn(warning);
+                    nullParent = true;
+                    return this;
                 }
             }
-            
+
             const newBlock = block[blockType].createBlock(options);
             currentBlockStack[currentBlockStack.length - 1].children.push(
                 newBlock
@@ -722,22 +755,58 @@ export function createNotion({ strict = false, nestingLimit = 2, limitChildren =
         },
 
         /**
+         * Adds a blank paragraph block to the current level in the block hierarchy.
+         *
+         * @returns {this} The builder instance for method chaining.
+         * @example
+         * notion.blank()
+         */
+        blank() {
+            const newBlock = block.paragraph.createBlock("");
+            currentBlockStack[currentBlockStack.length - 1].children.push(
+                newBlock
+            );
+            hasBlock = true;
+            return this;
+        },
+
+        /**
          * Adds a paragraph block to the current stack.
+         * 
          * If this method recieves a string over the max character length, it will split it and
          * add multiple paragraph blocks to the stack. This differs from the other block methods,
          * which will instead split long strings into an array of multiple rich_text objects.
-         * 
+         *
          * If you prefer that behavior for paragraphs, you can import enforceStringLength()
          * yourself, run your string through it, then pass the returned array to this method.
          * 
+         * If you allow for blank paragraph blocks, calling .paragraph("") or .paragraph() 
+         * will add a blank paragraph block to the current stack. You can do this with
+         * createNotion({ allowBlankParagraphs: true }).
+         * 
+         * If allowBlankParagraphs is false (the default):
+         * - In strict mode, an error will be thrown.
+         * - In non-strict mode (default), the call will simply not add a block to the stack.
+         *
          * @returns {this} The builder instance for method chaining.
          * @see block.paragraph.createBlock for full documentation
          */
         paragraph(options) {
-            if (typeof options === "string" && options.length > CONSTANTS.MAX_TEXT_LENGTH) {
-                const strings = enforceStringLength(options).filter(Boolean)
-                strings.forEach((string) => this.addBlock("paragraph", string))
-                return this
+            if (
+                typeof options === "string" &&
+                options.length > CONSTANTS.MAX_TEXT_LENGTH
+            ) {
+                const strings = enforceStringLength(options).filter(Boolean);
+                strings.forEach((string) => this.addBlock("paragraph", string));
+                return this;
+            } else if (
+                (
+                    (typeof options === "string" && options === "") ||
+                    (!options)
+                ) &&
+                allowBlankParagraphs === true
+            ) {
+                return this.blank();
             } else {
                 return this.addBlock("paragraph", options);
             }
@@ -749,14 +818,17 @@ export function createNotion({ strict = false, nestingLimit = 2, limitChildren =
          * @see block.heading_1.createBlock for full documentation
          */
         heading1(options) {
-            let value
+            let value;
 
-            if (typeof options === "string" && options.length > CONSTANTS.MAX_TEXT_LENGTH) {
-                value = enforceStringLength(options).filter(Boolean)
+            if (
+                typeof options === "string" &&
+                options.length > CONSTANTS.MAX_TEXT_LENGTH
+            ) {
+                value = enforceStringLength(options).filter(Boolean);
             } else {
-                value = options
+                value = options;
             }
-            
+
             return this.addBlock("heading_1", value);
         },
 
@@ -766,14 +838,17 @@ export function createNotion({ strict = false, nestingLimit = 2, limitChildren =
          * @see block.heading_2.createBlock for full documentation
          */
         heading2(options) {
-            let value
+            let value;
 
-            if (typeof options === "string" && options.length > CONSTANTS.MAX_TEXT_LENGTH) {
-                value = enforceStringLength(options).filter(Boolean)
+            if (
+                typeof options === "string" &&
+                options.length > CONSTANTS.MAX_TEXT_LENGTH
+            ) {
+                value = enforceStringLength(options).filter(Boolean);
             } else {
-                value = options
+                value = options;
             }
-            
+
             return this.addBlock("heading_2", value);
         },
 
@@ -783,12 +858,15 @@ export function createNotion({ strict = false, nestingLimit = 2, limitChildren =
          * @see block.heading_3.createBlock for full documentation
          */
         heading3(options) {
-            let value
+            let value;
 
-            if (typeof options === "string" && options.length > CONSTANTS.MAX_TEXT_LENGTH) {
-                value = enforceStringLength(options).filter(Boolean)
+            if (
+                typeof options === "string" &&
+                options.length > CONSTANTS.MAX_TEXT_LENGTH
+            ) {
+                value = enforceStringLength(options).filter(Boolean);
             } else {
-                value = options
+                value = options;
             }
 
             return this.addBlock("heading_3", value);
@@ -800,12 +878,15 @@ export function createNotion({ strict = false, nestingLimit = 2, limitChildren =
          * @see block.bulleted_list_item.createBlock for full documentation
          */
         bulletedListItem(options) {
-            let value
+            let value;
 
-            if (typeof options === "string" && options.length > CONSTANTS.MAX_TEXT_LENGTH) {
-                value = enforceStringLength(options).filter(Boolean)
+            if (
+                typeof options === "string" &&
+                options.length > CONSTANTS.MAX_TEXT_LENGTH
+            ) {
+                value = enforceStringLength(options).filter(Boolean);
             } else {
-                value = options
+                value = options;
             }
 
             return this.addBlock("bulleted_list_item", value);
@@ -826,12 +907,15 @@ export function createNotion({ strict = false, nestingLimit = 2, limitChildren =
          * @see block.numbered_list_item.createBlock for full documentation
          */
         numberedListItem(options) {
-            let value
+            let value;
 
-            if (typeof options === "string" && options.length > CONSTANTS.MAX_TEXT_LENGTH) {
-                value = enforceStringLength(options).filter(Boolean)
+            if (
+                typeof options === "string" &&
+                options.length > CONSTANTS.MAX_TEXT_LENGTH
+            ) {
+                value = enforceStringLength(options).filter(Boolean);
             } else {
-                value = options
+                value = options;
             }
 
             return this.addBlock("numbered_list_item", value);
@@ -852,14 +936,17 @@ export function createNotion({ strict = false, nestingLimit = 2, limitChildren =
          * @see block.to_do.createBlock for full documentation
          */
         toDo(options) {
-            let value
+            let value;
 
-            if (typeof options === "string" && options.length > CONSTANTS.MAX_TEXT_LENGTH) {
-                value = enforceStringLength(options).filter(Boolean)
+            if (
+                typeof options === "string" &&
+                options.length > CONSTANTS.MAX_TEXT_LENGTH
+            ) {
+                value = enforceStringLength(options).filter(Boolean);
             } else {
-                value = options
+                value = options;
             }
-            
+
             return this.addBlock("to_do", value);
         },
 
@@ -869,14 +956,17 @@ export function createNotion({ strict = false, nestingLimit = 2, limitChildren =
          * @see block.toggle.createBlock for full documentation
          */
         toggle(options) {
-            let value
+            let value;
 
-            if (typeof options === "string" && options.length > CONSTANTS.MAX_TEXT_LENGTH) {
-                value = enforceStringLength(options).filter(Boolean)
+            if (
+                typeof options === "string" &&
+                options.length > CONSTANTS.MAX_TEXT_LENGTH
+            ) {
+                value = enforceStringLength(options).filter(Boolean);
             } else {
-                value = options
+                value = options;
             }
-            
+
             return this.addBlock("toggle", value);
         },
 
@@ -886,14 +976,17 @@ export function createNotion({ strict = false, nestingLimit = 2, limitChildren =
          * @see block.code.createBlock for full documentation
          */
         code(options) {
-            let value
+            let value;
 
-            if (typeof options === "string" && options.length > CONSTANTS.MAX_TEXT_LENGTH) {
-                value = enforceStringLength(options).filter(Boolean)
+            if (
+                typeof options === "string" &&
+                options.length > CONSTANTS.MAX_TEXT_LENGTH
+            ) {
+                value = enforceStringLength(options).filter(Boolean);
             } else {
-                value = options
+                value = options;
             }
-            
+
             return this.addBlock("code", value);
         },
 
@@ -903,14 +996,17 @@ export function createNotion({ strict = false, nestingLimit = 2, limitChildren =
          * @see block.quote.createBlock for full documentation
          */
         quote(options) {
-            let value
+            let value;
 
-            if (typeof options === "string" && options.length > CONSTANTS.MAX_TEXT_LENGTH) {
-                value = enforceStringLength(options).filter(Boolean)
+            if (
+                typeof options === "string" &&
+                options.length > CONSTANTS.MAX_TEXT_LENGTH
+            ) {
+                value = enforceStringLength(options).filter(Boolean);
             } else {
-                value = options
+                value = options;
             }
-            
+
             return this.addBlock("quote", value);
         },
 
@@ -920,12 +1016,15 @@ export function createNotion({ strict = false, nestingLimit = 2, limitChildren =
          * @see block.callout.createBlock for full documentation
          */
         callout(options) {
-            let value
+            let value;
 
-            if (typeof options === "string" && options.length > CONSTANTS.MAX_TEXT_LENGTH) {
-                value = enforceStringLength(options).filter(Boolean)
+            if (
+                typeof options === "string" &&
+                options.length > CONSTANTS.MAX_TEXT_LENGTH
+            ) {
+                value = enforceStringLength(options).filter(Boolean);
             } else {
-                value = options
+                value = options;
             }
 
             return this.addBlock("callout", value);
@@ -1027,19 +1126,19 @@ export function createNotion({ strict = false, nestingLimit = 2, limitChildren =
          */
         loop(blockTypeOrCallback, arr) {
             if (arr === undefined || arr === null || arr.length < 1) {
-                return this
+                return this;
             }
-            
-            if (typeof blockTypeOrCallback === 'function') {
+
+            if (typeof blockTypeOrCallback === "function") {
                 arr.forEach((element, index) => {
-                    blockTypeOrCallback(this, element, index)
-                })
+                    blockTypeOrCallback(this, element, index);
+                });
             } else {
                 arr.forEach((element) => {
-                    this.addBlock(blockTypeOrCallback, element)
-                })
+                    this.addBlock(blockTypeOrCallback, element);
+                });
             }
-            return this
+            return this;
         },
 
         /**
@@ -1067,11 +1166,14 @@ export function createNotion({ strict = false, nestingLimit = 2, limitChildren =
             };
 
             if (hasProperty) {
-                removeNullProps(data.properties)
+                removeNullProps(data.properties);
             }
 
             if (hasPageParent) {
-                if (limitChildren === true && data.children.length > CONSTANTS.MAX_BLOCKS) {
+                if (
+                    limitChildren === true &&
+                    data.children.length > CONSTANTS.MAX_BLOCKS
+                ) {
                     const chunkedBlocks = chunkBlocks(data.children);
                     data.children = chunkedBlocks[0];
                     result.additionalBlocks = chunkedBlocks.slice(1);
@@ -1079,7 +1181,10 @@ export function createNotion({ strict = false, nestingLimit = 2, limitChildren =
                 const { parent, ...rest } = data;
                 result.content = parent ? { parent, ...rest } : data;
             } else if (hasPageId) {
-                if (limitChildren === true && data.children.length > CONSTANTS.MAX_BLOCKS) {
+                if (
+                    limitChildren === true &&
+                    data.children.length > CONSTANTS.MAX_BLOCKS
+                ) {
                     const chunkedBlocks = chunkBlocks(data.children);
                     data.children = chunkedBlocks[0];
                     result.additionalBlocks = chunkedBlocks.slice(1);
@@ -1087,7 +1192,10 @@ export function createNotion({ strict = false, nestingLimit = 2, limitChildren =
                 const { page_id, ...rest } = data;
                 result.content = page_id ? { page_id, ...rest } : data;
             } else if (hasBlockId) {
-                if (limitChildren === true && data.children.length > CONSTANTS.MAX_BLOCKS) {
+                if (
+                    limitChildren === true &&
+                    data.children.length > CONSTANTS.MAX_BLOCKS
+                ) {
                     const chunkedBlocks = chunkBlocks(data.children);
                     data.children = chunkedBlocks[0];
                     result.additionalBlocks = chunkedBlocks.slice(1);
@@ -1097,7 +1205,10 @@ export function createNotion({ strict = false, nestingLimit = 2, limitChildren =
             } else if (hasProperty && !hasBlock) {
                 result.content = data.properties;
             } else if (hasBlock && !hasProperty) {
-                if (limitChildren === true && data.children.length > CONSTANTS.MAX_BLOCKS) {
+                if (
+                    limitChildren === true &&
+                    data.children.length > CONSTANTS.MAX_BLOCKS
+                ) {
                     const chunkedBlocks = chunkBlocks(data.children);
                     result.content = chunkedBlocks[0];
                     result.additionalBlocks = chunkedBlocks.slice(1);
@@ -1108,7 +1219,10 @@ export function createNotion({ strict = false, nestingLimit = 2, limitChildren =
                 console.warn(
                     `Properties and blocks were added, so a full page object will be returned. However, it has no parent page or database specified.`
                 );
-                if (limitChildren === true && data.children.length > CONSTANTS.MAX_BLOCKS) {
+                if (
+                    limitChildren === true &&
+                    data.children.length > CONSTANTS.MAX_BLOCKS
+                ) {
                     const chunkedBlocks = chunkBlocks(data.children);
                     data.children = chunkedBlocks[0];
                     result.additionalBlocks = chunkedBlocks.slice(1);
@@ -1126,9 +1240,9 @@ export function createNotion({ strict = false, nestingLimit = 2, limitChildren =
 
         /**
          * Creates a new page in Notion using user-provided callback functions for page creation and block-append operations.
-         * 
-         * @param {*} creationCallback 
-         * @param {*} appendCallback 
+         *
+         * @param {*} creationCallback
+         * @param {*} appendCallback
          */
         createPage(creationCallback, appendCallback) {
             // Call this.build() directly if possible
