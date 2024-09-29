@@ -669,15 +669,20 @@ export function createNotion({
                 throw new Error(error);
             }
 
-            const newBlock = block[blockType].createBlock(options);
             if (!block[blockType].supports_children) {
                 const error = `startParent() called with type ${blockType}, which does not support child blocks.`;
                 console.error(error);
                 throw new Error(error);
             }
 
+            const newBlock = block[blockType].createBlock(options);
+
             if (!newBlock[blockType].children) {
                 newBlock[blockType].children = [];
+            }
+
+            if (newBlock[blockType].hasOwnProperty('is_toggleable') && newBlock[blockType].is_toggleable === false) {
+                newBlock[blockType].is_toggleable = true
             }
 
             currentBlockStack[currentBlockStack.length - 1].children.push(
