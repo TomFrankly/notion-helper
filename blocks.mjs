@@ -11,8 +11,8 @@ import {
 /*
  * TODO
  *
- * - Create a wrapper class that can give blocks internal labels. Will be useful for appending child block arrays to specific blocks, and editing blocks after creation but before they are sent to Notion
- * - Remove undefined blocks from children arrays before making calls
+ * ? Create a wrapper class that can give blocks internal labels. Will be useful for appending child block arrays to specific blocks, and editing blocks after creation but before they are sent to Notion
+ * - Implement columns
  */
 
 /**
@@ -125,7 +125,11 @@ export const block = {
                 children = [];
                 color = "default";
             } else {
-                ({ rich_text = [], children = [], color = "default" } = options);
+                ({
+                    rich_text = [],
+                    children = [],
+                    color = "default",
+                } = options);
             }
             return {
                 type: "bulleted_list_item",
@@ -140,6 +144,9 @@ export const block = {
 
     /**
      * Methods for callout blocks.
+     *
+     * @namespace
+     * @property {boolean} supports_children - Indicates if the block supports child blocks.
      */
     callout: {
         /**
@@ -200,6 +207,9 @@ export const block = {
 
     /**
      * Methods for code blocks.
+     *
+     * @namespace
+     * @property {boolean} supports_children - Indicates if the block supports child blocks.
      */
     code: {
         /**
@@ -248,6 +258,237 @@ export const block = {
                     language: language,
                 },
             };
+        },
+    },
+
+    /**
+     * Methods for column list blocks.
+     *
+     * @namespace
+     * @property {boolean} supports_children - Indicates if the block supports child blocks.
+     */
+    column_list: {
+        /**
+         * Indicates if the block supports child blocks.
+         * @type {boolean}
+         */
+        supports_children: true,
+        /**
+         * Creates a column list block. Column list blocks must have at least two column child blocks, each of which must have at least one child block - otherwise, the Notion API will throw an error.
+         *
+         * @see https://developers.notion.com/reference/block#column-list-and-column
+         *
+         * @param {(number|Array|undefined)} options - The options for creating the column list block.
+         * @param {number} [options] - The number of columns to create. Each will contain an empty paragraph block.
+         * @param {Array} [options] - An array where each element represents a column. Each element can be:
+         *   - A column object (will be added to the final column list's children array directly)
+         *   - A string (will create a column object containing a paragraph block with the string's value)
+         *   - An array (will create a column object containing the elements as children. Each element should be a string or a valid block object. Strings will be converted to paragraph blocks.)
+         *
+         * @returns {Object|null} The created column list block object, or null if invalid input is provided.
+         *
+         * @example
+         * // Create a column list with 3 empty columns
+         * const emptyColumns = block.column_list.createBlock(3);
+         *
+         * @example
+         * // Create a column list with 2 columns, each containing a paragraph
+         * const twoColumnList = block.column_list.createBlock(["First column", "Second column"]);
+         *
+         * @example
+         * // Create a column list with mixed content
+         * const mixedColumnList = block.column_list.createBlock([
+         *   "Text in first column",
+         *   ["Paragraph 1 in second column", "Paragraph 2 in second column"],
+         *   {
+         *     type: "column",
+         *     column: {},
+         *     children: [block.heading_2.createBlock("Custom heading in third column")]
+         *   }
+         * ]);
+         *
+         * @example
+         * // Create an empty column list
+         * const emptyColumnList = block.column_list.createBlock();
+         */
+        createBlock: (options) => {
+            if (
+                typeof options === "string" ||
+                typeof options === "object" ||
+                typeof options === "function"
+            ) {
+                return null;
+            }
+
+            if (!options || (Array.isArray(options) && options.length === 0)) {
+                return {
+                    type: "column_list",
+                    column_list: {},
+                    children: [],
+                };
+            }
+
+            if (typeof options === "number") {
+                let columns = [];
+
+                for (let i = 0; i < options; i++) {
+                    const column = {
+                        type: "column",
+                        column: {},
+                        children: [block.paragraph.createBlock("")],
+                    };
+                    columns.push(column);
+                }
+
+                return {
+                    type: "column_list",
+                    column_list: {},
+                    children: columns,
+                };
+            }
+
+            if (Array.isArray(options)) {
+                let columns = [];
+
+                for (let option of options) {
+                    if (
+                        typeof option === "object" &&
+                        option.hasOwnProperty("column")
+                    ) {
+                        columns.push(option);
+                    }
+
+                    if (Array.isArray(option)) {
+                        let blocks = [];
+
+                        for (let block of option) {
+                            if (typeof block === "string") {
+                                const paragraph =
+                                    block.paragraph.createBlock(block);
+                                blocks.push(paragraph);
+                            } else if (
+                                typeof block === "object" &&
+                                !block.hasOwnProperty("column")
+                            ) {
+                                blocks.push(block);
+                            }
+                        }
+
+                        const column = {
+                            type: "column",
+                            column: {},
+                            children: blocks,
+                        };
+
+                        columns.push(column);
+                    }
+
+                    if (typeof option === "string") {
+                        const column = {
+                            type: "column",
+                            column: {},
+                            children: [block.paragraph.createBlock(option)],
+                        };
+                        columns.push(column);
+                    }
+                }
+
+                return {
+                    type: "column_list",
+                    column_list: {},
+                    children: columns,
+                };
+            }
+        },
+    },
+
+    /**
+     * Methods for column blocks.
+     *
+     * @namespace
+     * @property {boolean} supports_children - Indicates if the block supports child blocks.
+     */
+    column: {
+        /**
+         * Indicates if the block supports child blocks.
+         * @type {boolean}
+         */
+        supports_children: true,
+        /**
+         * Creates a column block. A column block must have at least one non-column block in its children array, and the column block itself must be appended as a child block to a column_list block.
+         *
+         * @see https://developers.notion.com/reference/block#column-list-and-column
+         *
+         * @param {(Array|string|undefined)} options - The options for creating the column block.
+         * @param {Array} [options] - An array where each element becomes a child block of the column. Each element should be:
+         *   - A block object (will be added directly to the column's children array)
+         *   - A string (will be converted to a paragraph block)
+         * @param {string} [options] - A string that will be converted into a paragraph block within the column.
+         *
+         * @returns {Object} The created column block object.
+         *
+         * @example
+         * // Create an empty column
+         * const emptyColumn = block.column.createBlock();
+         *
+         * @example
+         * // Create a column with a single paragraph
+         * const singleParagraphColumn = block.column.createBlock("This is a paragraph in a column");
+         *
+         * @example
+         * // Create a column with multiple blocks
+         * const multiBlockColumn = block.column.createBlock([
+         *   "First paragraph",
+         *   block.heading_2.createBlock("Heading in column"),
+         *   "Another paragraph"
+         * ]);
+         *
+         * @example
+         * // Create a column with custom blocks
+         * const customBlocksColumn = block.column.createBlock([
+         *   block.paragraph.createBlock("Custom paragraph"),
+         *   block.bulleted_list_item.createBlock("Bullet point in column"),
+         *   block.image.createBlock({ url: "https://example.com/image.jpg" })
+         * ]);
+         */
+        createBlock: (options) => {
+            if (!options || (Array.isArray(options) && options.length === 0)) {
+                return {
+                    type: "column",
+                    column: {},
+                    children: [],
+                };
+            }
+
+            if (typeof options === "string") {
+                return {
+                    type: "column",
+                    column: {},
+                    children: [block.paragraph.createBlock(options)],
+                };
+            }
+
+            if (Array.isArray(options)) {
+                let blocks = [];
+
+                for (let block of options) {
+                    if (typeof block === "string") {
+                        const paragraph = block.paragraph.createBlock(block);
+                        blocks.push(paragraph);
+                    } else if (
+                        typeof block === "object" &&
+                        !block.hasOwnProperty("column")
+                    ) {
+                        blocks.push(block);
+                    }
+                }
+
+                return {
+                    type: "column",
+                    column: {},
+                    children: blocks,
+                };
+            }
         },
     },
 
@@ -667,7 +908,11 @@ export const block = {
                 children = [];
                 color = "default";
             } else {
-                ({ rich_text = [], children = [], color = "default" } = options);
+                ({
+                    rich_text = [],
+                    children = [],
+                    color = "default",
+                } = options);
             }
             return {
                 type: "numbered_list_item",
@@ -724,15 +969,20 @@ export const block = {
                 children = [];
                 color = "default";
             } else {
-                ({ rich_text = [], children = [], color = "default" } = options);
+                ({
+                    rich_text = [],
+                    children = [],
+                    color = "default",
+                } = options);
             }
-            
+
             return {
                 type: "paragraph",
                 paragraph: {
-                    rich_text: rich_text === "" 
-                        ? buildRichTextObj("")
-                        : enforceRichText(rich_text),
+                    rich_text:
+                        rich_text === ""
+                            ? buildRichTextObj("")
+                            : enforceRichText(rich_text),
                     color: color,
                     ...(children.length > 0 && { children }),
                 },
@@ -838,7 +1088,11 @@ export const block = {
                 children = [];
                 color = "default";
             } else {
-                ({ rich_text = [], children = [], color = "default" } = options);
+                ({
+                    rich_text = [],
+                    children = [],
+                    color = "default",
+                } = options);
             }
             return {
                 type: "quote",
@@ -947,7 +1201,9 @@ export const block = {
             type: "table_row",
             table_row: {
                 cells: cells.map((cell) =>
-                    typeof cell === "string" || typeof cell === "number" ? enforceRichText(cell) : cell
+                    typeof cell === "string" || typeof cell === "number"
+                        ? enforceRichText(cell)
+                        : cell
                 ),
             },
         }),
@@ -1100,7 +1356,11 @@ export const block = {
                 children = [];
                 color = "default";
             } else {
-                ({ rich_text = [], children = [], color = "default" } = options);
+                ({
+                    rich_text = [],
+                    children = [],
+                    color = "default",
+                } = options);
             }
             return {
                 type: "toggle",
