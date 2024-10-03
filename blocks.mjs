@@ -18,9 +18,9 @@ import {
 /**
  * Object with methods to construct the majority of block types supported by the Notion API.
  *
- * Block types include bookmark, bulleted list item, callout, code, divider, embed, file, heading, image, numbered list item, paragraph, pdf, quote, table, table row, table of contents, to-do, toggle, and video. Some block types return null if they are provided with invalid data; you should filter these out your final children array.
+ * Block types include bookmark, breadcrumb, bulleted list item, callout, code, column_list, column, divider, embed, file, heading, image, numbered list item, paragraph, pdf, quote, table, table row, table of contents, to-do, toggle, and video. Some block types return null if they are provided with invalid data; you should filter these out your final children array.
  *
- * Not implemented: Breadcrumb, column list, column, equation, link preview (unsupported), mention, synced block (unsupported)
+ * Not supported: Link preview, synced block. Equation and Mention are supported within the buildRichTextObj() function, not here.
  *
  * @namespace
  */
@@ -76,6 +76,36 @@ export const block = {
                     url: url,
                     caption: enforceRichText(caption),
                 },
+            };
+        },
+    },
+
+    /**
+     * Methods for breadcrumb blocks.
+     *
+     * @namespace
+     * @property {boolean} supports_children - Indicates if the block supports child blocks.
+     */
+    breadcrumb: {
+        /**
+         * Indicates if the block supports child blocks.
+         * @type {boolean}
+         */
+        supports_children: false,
+
+        /**
+         * Creates a breadcrumb block.
+         *
+         * @returns {Object} A breadcrumb block object.
+         *
+         * @example
+         * // Create a breadcrumb block
+         * const breadcrumbBlock = block.breadcrumb.createBlock();
+         */
+        createBlock: () => {
+            return {
+                type: "breadcrumb",
+                breadcrumb: {},
             };
         },
     },
@@ -1117,14 +1147,15 @@ export const block = {
          * @type {boolean}
          */
         supports_children: true,
+        
         /**
          * Creates a table block.
          *
          * @function
-         * @param {Object} options - Options for creating the table.
+         * @param {Object} [options] - Options for creating the table. If undefined, creates an empty table.
          * @param {boolean} [options.has_column_header=false] - Whether the table has a column header.
          * @param {boolean} [options.has_row_header=false] - Whether the table has a row header.
-         * @param {Array<Array<string>>|Array<Object>} options.rows - An array of rows. Each row can be an array of strings or a table_row object.
+         * @param {Array<Array<string>>|Array<Object>} [options.rows=[]] - An array of rows. Each row can be an array of strings or a table_row object.
          * @returns {Object} A table block object compatible with Notion's API.
          * @example
          * // Use with array of string arrays
@@ -1137,6 +1168,7 @@ export const block = {
          *   has_column_header: true
          * });
          *
+         * @example
          * // Use with array of table_row objects
          * const complexTable = block.table.createBlock({
          *   rows: [
@@ -1147,12 +1179,26 @@ export const block = {
          *   has_column_header: true,
          *   has_row_header: false
          * });
+         *
+         * @example
+         * // Create an empty table
+         * const emptyTable = block.table.createBlock();
          */
-        createBlock: ({
-            has_column_header = false,
-            has_row_header = false,
-            rows = [],
-        }) => {
+        createBlock: (options) => {
+            let has_column_header, has_row_header, rows;
+
+            if (typeof options === "object") {
+                ({
+                    has_column_header = false,
+                    has_row_header = false,
+                    rows = [],
+                } = options);
+            } else {
+                has_column_header = false;
+                has_row_header = false;
+                rows = [];
+            }
+
             const children = rows.map((row) =>
                 Array.isArray(row) ? block.table_row.createBlock(row) : row
             );
@@ -1490,6 +1536,28 @@ export function callout(options) {
  */
 export function code(options) {
     return block.code.createBlock(options);
+}
+
+/**
+ * Creates a column list block.
+ * @memberof BlockShorthand
+ * @param {number|Array|undefined} options - The number of columns to create, an array representing column content, or undefined for an empty column list.
+ * @see block.column_list for full documentation
+ * @returns {Object} A column list block.
+ */
+export function columnList(options) {
+    return block.column_list.createBlock(options);
+}
+
+/**
+ * Creates a column block.
+ * @memberof BlockShorthand
+ * @param {Array|string|undefined} options - An array of block content, a string for a single paragraph, or undefined for an empty column.
+ * @see block.column for full documentation
+ * @returns {Object} A column block.
+ */
+export function column(options) {
+    return block.column.createBlock(options);
 }
 
 /**

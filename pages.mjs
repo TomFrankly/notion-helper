@@ -681,8 +681,11 @@ export function createNotion({
                 newBlock[blockType].children = [];
             }
 
-            if (newBlock[blockType].hasOwnProperty('is_toggleable') && newBlock[blockType].is_toggleable === false) {
-                newBlock[blockType].is_toggleable = true
+            if (
+                newBlock[blockType].hasOwnProperty("is_toggleable") &&
+                newBlock[blockType].is_toggleable === false
+            ) {
+                newBlock[blockType].is_toggleable = true;
             }
 
             currentBlockStack[currentBlockStack.length - 1].children.push(
@@ -732,12 +735,25 @@ export function createNotion({
          * notion.paragraph('This is a paragraph.');
          */
         addBlock(blockType, options = {}) {
+            const optionlessBlockTypes = [
+                "breadcrumb",
+                "column_list",
+                "column",
+                "divider",
+                "table",
+            ];
+
             if (
                 blockType === undefined ||
                 blockType === null ||
-                options === undefined ||
-                options === null ||
-                Object.keys(options).length < 1
+                (
+                    (
+                        options === undefined ||
+                        options === null ||
+                        Object.keys(options).length < 1
+                    ) &&
+                    !optionlessBlockTypes.includes(blockType)
+                )
             ) {
                 if (strict === true) {
                     const error = `Null/undefined block type, or null/undefined options provided to addBlock():\n\nBlock type: ${blockType}\nOptions: ${options}\n\nStrict mode is enabled, so this method is throwing an error. You can call createNotion() without the strict argument if you\'d just like this method call to be ignored instead.`;
@@ -777,18 +793,18 @@ export function createNotion({
 
         /**
          * Adds a paragraph block to the current stack.
-         * 
+         *
          * If this method recieves a string over the max character length, it will split it and
          * add multiple paragraph blocks to the stack. This differs from the other block methods,
          * which will instead split long strings into an array of multiple rich_text objects.
          *
          * If you prefer that behavior for paragraphs, you can import enforceStringLength()
          * yourself, run your string through it, then pass the returned array to this method.
-         * 
-         * If you allow for blank paragraph blocks, calling .paragraph("") or .paragraph() 
+         *
+         * If you allow for blank paragraph blocks, calling .paragraph("") or .paragraph()
          * will add a blank paragraph block to the current stack. You can do this with
          * createNotion({ allowBlankParagraphs: true }).
-         * 
+         *
          * If allowBlankParagraphs is false (the default):
          * - In strict mode, an error will be thrown.
          * - In non-strict mode (default), the call will simply not add a block to the stack.
@@ -805,10 +821,7 @@ export function createNotion({
                 strings.forEach((string) => this.addBlock("paragraph", string));
                 return this;
             } else if (
-                (
-                    (typeof options === "string" && options === "") ||
-                    (!options)
-                ) &&
+                ((typeof options === "string" && options === "") || !options) &&
                 allowBlankParagraphs === true
             ) {
                 return this.blank();
@@ -1108,12 +1121,13 @@ export function createNotion({
         },
 
         /**
-         * Adds a table block to the current stack.
+         * Adds a table block to the current stack, then increments the stack one level down, so further blocks are added as children of the table block. Only tableRow() and endTable() may be chained directly to this method.
+         *
          * @returns {this} The builder instance for method chaining.
          * @see block.table.createBlock for full documentation
          */
         table(options) {
-            return this.addBlock("table", options);
+            return this.startParent("table", options);
         },
 
         /**
@@ -1123,6 +1137,61 @@ export function createNotion({
          */
         tableRow(options) {
             return this.addBlock("table_row", options);
+        },
+
+        /**
+         * Alias for endParent(). Provides an intuitive way to stop adding table_row blocks to the current table block, and goes one level up in the block stack.
+         *
+         * @returns {this} The builder instance for method chaining.
+         */
+        endTable() {
+            return this.endParent();
+        },
+
+        /**
+         * Adds a breadcrumb block to the current stack.
+         * @returns {this} The builder instance for method chaining.
+         * @see block.breadcrumb.createBlock for full documentation
+         */
+        breadcrumb() {
+            return this.addBlock("breadcrumb");
+        },
+
+        /**
+         * Adds a column list to the current stack, then increments the stack one level down, so further blocks are added as children of the column list block. Only column() may be chained directly to this method. Column lists must have at least two column children, each of which must have at least one non-column child block.
+         * 
+         * @returns {this} The builder instance for method chaining.
+         * @see block.column_list.createBlock for full documentation.
+         */
+        columnList(options) {
+            return this.startParent("column_list", options)
+        },
+
+        /**
+         * Alias for endParent(). Provides an intuitive way to stop adding column blocks to the current column_list block, and goes one level up in the block stack.
+         *
+         * @returns {this} The builder instance for method chaining.
+         */
+        endColumnList() {
+            return this.endParent()
+        },
+
+        /**
+         * Adds a column block to the current stack, then increments the stack one level down, so further blocks are added as children of the column block. Only non-column blocks can be added as children of column blocks.
+         * @returns {this} The builder instance for method chaining.
+         * @see block.column.createBlock for full documentation.
+         */
+        column(options) {
+            return this.startParent("column", options)
+        },
+
+        /**
+         * Alias for endParent(). Provides an intuitive way to stop adding blocks to the current column block, and goes one level up in the block stack.
+         *
+         * @returns {this} The builder instance for method chaining.
+         */
+        endColumn() {
+            return this.endParent()
         },
 
         /**
