@@ -391,16 +391,16 @@ export const block = {
                     if (Array.isArray(option)) {
                         let blocks = [];
 
-                        for (let block of option) {
-                            if (typeof block === "string") {
+                        for (let singleBlock of option) {
+                            if (typeof singleBlock === "string") {
                                 const paragraph =
-                                    block.paragraph.createBlock(block);
+                                    block.paragraph.createBlock(singleBlock);
                                 blocks.push(paragraph);
                             } else if (
-                                typeof block === "object" &&
-                                !block.hasOwnProperty("column")
+                                typeof singleBlock === "object" &&
+                                !singleBlock.hasOwnProperty("column")
                             ) {
-                                blocks.push(block);
+                                blocks.push(singleBlock);
                             }
                         }
 
@@ -501,15 +501,15 @@ export const block = {
             if (Array.isArray(options)) {
                 let blocks = [];
 
-                for (let block of options) {
-                    if (typeof block === "string") {
-                        const paragraph = block.paragraph.createBlock(block);
+                for (let singleBlock of options) {
+                    if (typeof singleBlock === "string") {
+                        const paragraph = block.paragraph.createBlock(singleBlock);
                         blocks.push(paragraph);
                     } else if (
-                        typeof block === "object" &&
-                        !block.hasOwnProperty("column")
+                        typeof singleBlock === "object" &&
+                        !singleBlock.hasOwnProperty("column")
                     ) {
-                        blocks.push(block);
+                        blocks.push(singleBlock);
                     }
                 }
 
@@ -1147,7 +1147,7 @@ export const block = {
          * @type {boolean}
          */
         supports_children: true,
-        
+
         /**
          * Creates a table block.
          *
