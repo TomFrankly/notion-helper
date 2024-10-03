@@ -644,12 +644,25 @@ export function createNotion({
          *       .endParent();
          */
         startParent(blockType, options = {}) {
+            const optionlessBlockTypes = [
+                "breadcrumb",
+                "column_list",
+                "column",
+                "divider",
+                "table",
+            ];
+            
             if (
                 blockType === undefined ||
                 blockType === null ||
-                options === undefined ||
-                options === null ||
-                Object.keys(options).length < 1
+                (
+                    (
+                        options === undefined ||
+                        options === null ||
+                        Object.keys(options).length < 1
+                    ) &&
+                    !optionlessBlockTypes.includes(blockType)
+                )
             ) {
                 if (strict === true) {
                     const error = `Null/undefined block type, or null/undefined options provided to startParent():\n\nBlock type: ${blockType}\nOptions: ${options}\n\nStrict mode is enabled, so this method is throwing an error. You can call createNotion() without the strict argument if you\'d just like this method call to be ignored instead.`;
