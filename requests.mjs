@@ -15,6 +15,10 @@
  * - Retrieve block children (get)
  * - Update a block (patch)
  * - Delete a block (delete)
+ * 
+ * More block tasks
+ * - Handle nested columns (API can't handle a column_list block at the last nesting level)
+ * - Improve performance of block-append algorithm.
  *
  * page
  * X Create a page (post)

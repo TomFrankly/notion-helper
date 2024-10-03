@@ -690,7 +690,7 @@ export function createNotion({
 
             const newBlock = block[blockType].createBlock(options);
 
-            if (!newBlock[blockType].children) {
+            if (!newBlock[blockType].hasOwnProperty("children")) {
                 newBlock[blockType].children = [];
             }
 

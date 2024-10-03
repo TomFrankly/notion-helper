@@ -344,17 +344,15 @@ export const block = {
         createBlock: (options) => {
             if (
                 typeof options === "string" ||
-                typeof options === "object" ||
                 typeof options === "function"
             ) {
                 return null;
             }
 
-            if (!options || (Array.isArray(options) && options.length === 0)) {
+            if (!options || (Array.isArray(options) && options.length === 0) || (typeof options === "object" && Object.keys(options).length < 1)) {
                 return {
                     type: "column_list",
                     column_list: {},
-                    children: [],
                 };
             }
 
@@ -364,16 +362,18 @@ export const block = {
                 for (let i = 0; i < options; i++) {
                     const column = {
                         type: "column",
-                        column: {},
-                        children: [block.paragraph.createBlock("")],
+                        column: {
+                            children: [block.paragraph.createBlock("")],
+                        },
                     };
                     columns.push(column);
                 }
 
                 return {
                     type: "column_list",
-                    column_list: {},
-                    children: columns,
+                    column_list: {
+                        children: columns,
+                    },
                 };
             }
 
@@ -406,8 +406,9 @@ export const block = {
 
                         const column = {
                             type: "column",
-                            column: {},
-                            children: blocks,
+                            column: {
+                                children: blocks,
+                            },
                         };
 
                         columns.push(column);
@@ -416,17 +417,30 @@ export const block = {
                     if (typeof option === "string") {
                         const column = {
                             type: "column",
-                            column: {},
-                            children: [block.paragraph.createBlock(option)],
+                            column: {
+                                children: [block.paragraph.createBlock(option)],
+                            },
                         };
+                        columns.push(column);
+                    }
+
+                    if (typeof option === "object" && !option.hasOwnProperty('column')) {
+                        const column = {
+                            type: "column",
+                            column: {
+                                children: [ option ],
+                            },
+                        };
+
                         columns.push(column);
                     }
                 }
 
                 return {
                     type: "column_list",
-                    column_list: {},
-                    children: columns,
+                    column_list: {
+                        children: columns,
+                    },
                 };
             }
         },
@@ -482,19 +496,21 @@ export const block = {
          * ]);
          */
         createBlock: (options) => {
-            if (!options || (Array.isArray(options) && options.length === 0)) {
+            if (!options || (Array.isArray(options) && options.length === 0) || (typeof options === "object" && Object.keys(options).length < 1)) {
                 return {
                     type: "column",
-                    column: {},
-                    children: [],
+                    column: {
+                        children: [],
+                    },
                 };
             }
 
             if (typeof options === "string") {
                 return {
                     type: "column",
-                    column: {},
-                    children: [block.paragraph.createBlock(options)],
+                    column: {
+                        children: [block.paragraph.createBlock(options)],
+                    },
                 };
             }
 
@@ -515,8 +531,9 @@ export const block = {
 
                 return {
                     type: "column",
-                    column: {},
-                    children: blocks,
+                    column: {
+                        children: blocks,
+                    },
                 };
             }
         },
