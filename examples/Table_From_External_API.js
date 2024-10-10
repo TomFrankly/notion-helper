@@ -35,7 +35,8 @@ const response = await appendBlocks({
             )
         )
         .endTable()
-        .build(),
+        .build()
+        .content,
     client: notion,
 });
 
