@@ -8,6 +8,8 @@ const notion = new Client({
     auth: secret,
 });
 
+const page_id = "YOUR_TARGET_PAGE"
+
 const response = await appendBlocks({
     block_id: page_id,
     children: createNotion({ limitChildren: false })
