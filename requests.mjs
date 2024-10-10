@@ -300,6 +300,10 @@ export const request = {
                             count++
                         }
                     }
+
+                    if (tempArr.length > 0) {
+                        chunks.push(tempArr)
+                    }
                 
                     return chunks
                 }
@@ -321,16 +325,6 @@ export const request = {
                     let allResponses = [];
 
                     try {
-                        /**
-                         * We can slice any table or column_list blocks into their own slices.
-                         * This will maintain the current recursion scheme for all non-table, non-column_list blocks.
-                         * This also means we could later apply a better algorithm for non-table, non-column_list blocks without
-                         * needing to consider the multi-level-spanning needs of these special blocks.
-                         * 
-                         * So, instead of simply slicing on childen.length / 100, we need to find the next index of a special block and slice
-                         * with that index as the end (so it's not included).
-                         */
-
                         const chunks = createSlices(children)
                         
                         for (let chunk of chunks) {
@@ -349,7 +343,6 @@ export const request = {
                                     ) {
                                         const childrenArray = block[type].children;
 
-                                        // If block is a table, we need to send the first child with it
                                         if (type === "table") {
                                             const firstChild = childrenArray.shift()
                                             chunkChildren.push(childrenArray)
@@ -361,7 +354,7 @@ export const request = {
                                         }
                                     } else {
                                         const blankArray = [];
-                                        chunkChildren.push(blankArray); // Maintains positioning
+                                        chunkChildren.push(blankArray);
                                     }
                                 }
                             }
