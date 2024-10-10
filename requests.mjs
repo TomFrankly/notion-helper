@@ -15,7 +15,7 @@
  * - Retrieve block children (get)
  * - Update a block (patch)
  * - Delete a block (delete)
- * 
+ *
  * More block tasks
  * - Handle nested columns (API can't handle a column_list block at the last nesting level)
  * - Improve performance of block-append algorithm.
@@ -278,7 +278,32 @@ export const request = {
              */
             append: (() => {
                 let apiCallCount = 0;
+                const specialTypes = ["column_list"]
 
+                function createSlices(arr) {
+                    let chunks = []
+                    let tempArr = []
+                    let count = 0
+                
+                    for (let block of arr) {
+                        if (
+                            count > 99 ||
+                            (tempArr.length > 0 && specialTypes.includes(block.type) && !specialTypes.includes(tempArr[0].type)) ||
+                            (tempArr.length > 0 && !specialTypes.includes(block.type) && specialTypes.includes(tempArr[0].type))
+                        ) {
+                            chunks.push(tempArr)
+                            tempArr = []
+                            tempArr.push(block)
+                            count = 1
+                        } else {
+                            tempArr.push(block)
+                            count++
+                        }
+                    }
+                
+                    return chunks
+                }
+                
                 async function appendInternal({
                     block_id,
                     children,
@@ -296,31 +321,48 @@ export const request = {
                     let allResponses = [];
 
                     try {
-                        for (
-                            let i = 0;
-                            i <= Math.floor(children.length / 100);
-                            i++
-                        ) {
-                            const chunk = children.slice(
-                                i * 100,
-                                Math.min(i * 100 + 100, children.length)
-                            );
+                        /**
+                         * We can slice any table or column_list blocks into their own slices.
+                         * This will maintain the current recursion scheme for all non-table, non-column_list blocks.
+                         * This also means we could later apply a better algorithm for non-table, non-column_list blocks without
+                         * needing to consider the multi-level-spanning needs of these special blocks.
+                         * 
+                         * So, instead of simply slicing on childen.length / 100, we need to find the next index of a special block and slice
+                         * with that index as the end (so it's not included).
+                         */
+
+                        const chunks = createSlices(children)
+                        
+                        for (let chunk of chunks) {
 
                             const chunkChildren = [];
 
-                            for (let block of chunk) {
-                                const type = block.type;
+                            /* Currently, a column_list block is a "special type" and cannot have its children recursively applied
+                            in future calls. */
+                            if (!specialTypes.includes(chunk[0].type)) {
+                                for (let block of chunk) {
+                                    const type = block.type;
+    
+                                    if (
+                                        block[type].children &&
+                                        block[type].children.length > 0
+                                    ) {
+                                        const childrenArray = block[type].children;
 
-                                if (
-                                    block[type].children &&
-                                    block[type].children.length > 0
-                                ) {
-                                    const childenArray = block[type].children;
-                                    chunkChildren.push(childenArray);
-                                    block[type].children = [];
-                                } else {
-                                    const blankArray = [];
-                                    chunkChildren.push(blankArray);
+                                        // If block is a table, we need to send the first child with it
+                                        if (type === "table") {
+                                            const firstChild = childrenArray.shift()
+                                            chunkChildren.push(childrenArray)
+                                            block[type].children = []
+                                            block[type].children.push(firstChild)
+                                        } else {
+                                            chunkChildren.push(childrenArray);
+                                            block[type].children = [];
+                                        }
+                                    } else {
+                                        const blankArray = [];
+                                        chunkChildren.push(blankArray); // Maintains positioning
+                                    }
                                 }
                             }
 
@@ -426,12 +468,14 @@ export const request = {
                             apiCallCount: apiCallCount,
                         };
                     } catch (error) {
-                        console.error(`Encountered error while appending block children: ${error}`)
+                        console.error(
+                            `Encountered error while appending block children: ${error}`
+                        );
                         return {
                             apiResponses: null,
                             apiCallCount: apiCallCount,
-                            error: error.message
-                        }
+                            error: error.message,
+                        };
                     }
                 };
 
