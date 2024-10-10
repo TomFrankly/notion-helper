@@ -424,7 +424,7 @@ export const block = {
                         columns.push(column);
                     }
 
-                    if (typeof option === "object" && !option.hasOwnProperty('column')) {
+                    if (!Array.isArray(option) && typeof option === "object" && !option.hasOwnProperty('column')) {
                         const column = {
                             type: "column",
                             column: {
