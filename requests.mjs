@@ -374,7 +374,7 @@ export const request = {
                                             const childrenArray = block[type].children;
 
                                             if (type === "table") {
-                                                const firstRowsCount = Math.min(blockLimit - 100 - blocksUsed, block[type].children.length, maxChildArrayLimit)
+                                                const firstRowsCount = Math.max(1, Math.min(blockLimit - 100 - blocksUsed, block[type].children.length, maxChildArrayLimit))
                                                 blocksUsed += firstRowsCount
                                                 const firstRows = childrenArray.slice(0, firstRowsCount)
                                                 const remainingRows = childrenArray.slice(firstRowsCount)
