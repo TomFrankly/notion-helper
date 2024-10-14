@@ -1,6 +1,8 @@
 const CONSTANTS = {
     MAX_TEXT_LENGTH: 2000,
     MAX_BLOCKS: 100,
+    MAX_BLOCKS_REQEST: 1000,
+    MAX_CHILD_ARRAY_DEPTH: 2,
     IMAGE_SUPPORT: {
         FORMATS: [
             'bmp', 'gif', 'heic', 'jpeg', 'jpg', 'png', 'svg', 'tif', 'tiff'

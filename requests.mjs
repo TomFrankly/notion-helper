@@ -1,3 +1,6 @@
+import { getDepth, getTotalCount, getLongestArray } from "./utils.mjs"
+import CONSTANTS from "./constants.mjs";
+
 /**
  * These functions take user-provided callback functions for API-specific requests, such as page-creation.
  *
@@ -18,7 +21,7 @@
  *
  * More block tasks
  * - Handle nested columns (API can't handle a column_list block at the last nesting level)
- * - Improve performance of block-append algorithm.
+ * X Improve performance of block-append algorithm. (In a good spot now, though could be better using an in-memory tracker tree)
  *
  * page
  * X Create a page (post)
@@ -329,11 +332,25 @@ export const request = {
                         
                         for (let chunk of chunks) {
 
-                            const chunkChildren = [];
+                            const chunkChildren = []
 
+                            const blockLimit = CONSTANTS.MAX_BLOCKS_REQEST
+                            const blocksInChunk = getTotalCount(chunk)
+
+                            const maxChildArrayLimit = CONSTANTS.MAX_BLOCKS
+                            const maxChildArrayLength = getLongestArray(chunk)
+
+                            const maxDepthLimit = CONSTANTS.MAX_CHILD_ARRAY_DEPTH
+                            const maxDepth = getDepth(chunk)
+                            
                             /* Currently, a column_list block is a "special type" and cannot have its children recursively applied
                             in future calls. */
-                            if (!specialTypes.includes(chunk[0].type)) {
+                            if (
+                                !specialTypes.includes(chunk[0].type) && 
+                                (blocksInChunk > blockLimit || maxDepth > maxDepthLimit || maxChildArrayLength > maxChildArrayLimit)
+                            ) {
+                                let blocksUsed = chunk.length
+                                
                                 for (let block of chunk) {
                                     const type = block.type;
     
@@ -341,22 +358,42 @@ export const request = {
                                         block[type].children &&
                                         block[type].children.length > 0
                                     ) {
-                                        const childrenArray = block[type].children;
+                                        const blockMaxDepth = getDepth(block[type].children, 1)
+                                        const blockMaxChildArrayLength = getLongestArray(block[type].children)
+                                        const blockTotalChildBlockCount = getTotalCount(block[type].children)
 
-                                        if (type === "table") {
-                                            const firstChild = childrenArray.shift()
-                                            chunkChildren.push(childrenArray)
-                                            block[type].children = []
-                                            block[type].children.push(firstChild)
+                                        if (
+                                            blockMaxDepth <= maxDepthLimit &&
+                                            blockMaxChildArrayLength <= maxChildArrayLimit &&
+                                            blocksUsed + blockTotalChildBlockCount < blockLimit - 100 // Leave buffer for required children of table blocks
+                                        ) {
+                                            blocksUsed += blockTotalChildBlockCount
+                                            const blankArray = [];
+                                            chunkChildren.push(blankArray);
                                         } else {
-                                            chunkChildren.push(childrenArray);
-                                            block[type].children = [];
+                                            const childrenArray = block[type].children;
+
+                                            if (type === "table") {
+                                                const firstRowsCount = Math.min(blockLimit - 100 - blocksUsed, block[type].children.length, maxChildArrayLimit)
+                                                blocksUsed += firstRowsCount
+                                                const firstRows = childrenArray.slice(0, firstRowsCount)
+                                                const remainingRows = childrenArray.slice(firstRowsCount)
+
+                                                chunkChildren.push(remainingRows)
+                                                block[type].children = []
+                                                block[type].children.push(...firstRows)
+                                            } else {
+                                                chunkChildren.push(childrenArray);
+                                                block[type].children = [];
+                                            }
                                         }
                                     } else {
                                         const blankArray = [];
                                         chunkChildren.push(blankArray);
                                     }
                                 }
+                            } else {
+                                chunkChildren.push(...chunk.map(() => []));
                             }
 
                             let callingFunction;
@@ -412,6 +449,7 @@ export const request = {
                                 const results = getResults(response);
 
                                 for (let [index, block] of chunk.entries()) {
+
                                     if (chunkChildren[index].length > 0) {
                                         if (
                                             results[index] &&

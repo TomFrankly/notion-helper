@@ -194,7 +194,7 @@ export function quickPages({ parent, parent_type, pages, schema, childrenFn }) {
  * @namespace
  * @function createNotion
  * @param {boolean} [strict=false] If true, the builder will throw errors when passed invalid or null data. Otherwise, it will try to gracefully return, and strip out, null properties and blocks.
- * @param {number} [nestingLimit=2] Defines the number of nested levels of children arrays the final object can have. Defaults to 2, which is the limit for a single Notion API request.
+ * @param {number} [limitNesting=true] If true, limits the number of nested children block arrays to 2, which is the limit for a single Notion API request. Can be set to false if you're using the appendBlocks() or createPage() functions, which will recursively append nested children block arrays in subsequent API calls.
  * @param {boolean} [limitChildren=true] If true, the final content object's children array will have a maximum of 100 blocks, and the rest will be put into the additionalBlocks array in chunks of 100. If false, the content object will contain all child blocks.
  * @param {boolean} [allowBlankParagraphs=false] If true, calling .paragraph("") will result in an empty paragraph block being added to the block stack. Otherwise, .paragraph("") will return null, and will be stripped out of the children block array once you call .build()
  * @returns {NotionBuilder} A builder object with methods for constructing and managing Notion content. The builder includes methods to set page and property details, add various block types, manage nested structures, and ultimately build Notion-compatible objects.
@@ -219,7 +219,7 @@ export function quickPages({ parent, parent_type, pages, schema, childrenFn }) {
  */
 export function createNotion({
     strict = false,
-    nestingLimit = 2,
+    limitNesting = true,
     limitChildren = true,
     allowBlankParagraphs = false,
 } = {}) {
@@ -307,7 +307,6 @@ export function createNotion({
                 type: "database_id",
             });
             hasPageParent = true;
-            nestingLevel++;
             return this;
         },
 
@@ -322,7 +321,6 @@ export function createNotion({
                 type: "page_id",
             });
             hasPageParent = true;
-            nestingLevel++;
             return this;
         },
 
@@ -355,7 +353,6 @@ export function createNotion({
         blockId(block_id) {
             data.block_id = page_meta.block.createMeta(block_id);
             hasBlockId = true;
-            nestingLevel++;
             return this;
         },
 
@@ -676,8 +673,8 @@ export function createNotion({
                 }
             }
 
-            if (nestingLevel > nestingLimit) {
-                const error = `Nesting level exceeded. Requests can only have ${nestingLimit} levels of nested child blocks.`;
+            if (limitNesting === true && nestingLevel > 2) {
+                const error = `Nesting level exceeded. Requests can only have 2 levels of nested child blocks.`;
                 console.error(error);
                 throw new Error(error);
             }

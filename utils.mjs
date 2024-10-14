@@ -176,3 +176,75 @@ export function validateDate(dateInput) {
         return null
     }
 }
+
+/**
+ * Checks a provided array of child blocks to see how many nested levels of child blocks are present. Used by requests.blocks.children.append to determine if recursive calls need to be used.
+ * 
+ * @param {Array<Object>} arr - The array of child blocks to be depth-checked.
+ * @param {number} [level = 1] - The current level.
+ * 
+ * @returns {number}
+ */
+export function getDepth(arr, level = 0) {
+    if (!Array.isArray(arr) || arr.length === 0) {
+        return level
+    }
+
+    let maxDepth = level
+
+    for (let block of arr) {
+        if (block[block.type].children) {
+            const depth = getDepth(block[block.type].children, level + 1)
+            maxDepth = Math.max(maxDepth, depth)
+        }
+    }
+
+    return maxDepth
+}
+
+/**
+ * Gets the total number of blocks within an array of child blocks, including
+ * child blocks of those blocks (and so on). Used to ensure that requests
+ * do not exceed the 1,000 total block limit of the Notion API.
+ * 
+ * @param {Array<Object>} arr - The array of block objects to be counted.
+ * @returns {number}
+ */
+export function getTotalCount(arr) {
+    if (!arr || arr?.length === 0) return 0
+
+    return arr.reduce(
+        (acc, child) => {
+            if(child[child.type].children) {
+                return (
+                    acc + 1 + getTotalCount(child[child.type].children)
+                )
+            }
+            return acc
+        }, 0
+    )
+}
+
+/**
+ * Gets the length of the longest array within a nested block array.
+ * 
+ * @param {Array<Object>} arr - The array to check
+ * @param {number} count - The length of the array one level up from the array being checked, or 0 if this is the initial call of the function
+ * @returns {number}
+ */
+export function getLongestArray(arr, count = 0) {
+    if (!Array.isArray(arr) || arr.length === 0) {
+        return count
+    }
+
+    let maxLength = Math.max(count, arr.length)
+
+    for (let block of arr) {
+        if (block[block.type].children) {
+            const count = getLongestArray(block[block.type].children, maxLength)
+            maxLength = Math.max(count, maxLength)
+        }
+    }
+
+    return maxLength
+}
