@@ -20,6 +20,10 @@ Install via [npm](https://docs.npmjs.com/cli/v10/commands/npm-install):
 npm install notion-helper
 ```
 
+## TypeScript Support
+
+The notion-helper package has TypeScript support via declarations generated from the JSDocs comments in the source files. If you're using TypeScript, you'll get full type chcking and auto-completion in your editor when using notion-helper.
+
 ## Usage
 
 Import the package:

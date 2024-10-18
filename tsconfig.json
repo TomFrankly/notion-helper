@@ -1,0 +1,18 @@
+{
+    "include": ["src/**/*.mjs", "src/**/*.js"],
+    "compilerOptions": {
+        "allowJs": true,
+        "declaration": true,
+        "emitDeclarationOnly": true,
+        "outDir": "dist",
+        "declarationMap": true,
+        "forceConsistentCasingInFileNames": true,
+        "strict": true,
+        "esModuleInterop": true,
+        "skipLibCheck": true,
+        "module": "esnext",
+        "moduleResolution": "node",
+        "resolveJsonModule": true,
+        "isolatedModules": true
+    }
+}
