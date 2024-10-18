@@ -1,10 +1,10 @@
 {
   "name": "notion-helper",
   "description": "A library of functions for working more easily with the Notion API",
-  "version": "1.2.20",
+  "version": "1.2.22",
   "type": "module",
   "main": "src/index.mjs",
-  "types": "dist/index.d.ts",
+  "types": "dist/index.d.mts",
   "files": ["src", "dist"],
   "devDependencies": {
     "typescript": "^5.6.3"
