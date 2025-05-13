@@ -236,6 +236,7 @@ export const request = {
              * @function
              * @param {Object} options - The options for appending blocks.
              * @param {string} options.block_id - The ID of the parent block to append children to. Can be a page ID.
+             * @param {string} options.after - The ID of an existing block after which to append the children.
              * @param {Array<Object>} options.children - An array of child blocks to append.
              * @param {Object} [options.client] - The Notion client object. Either this or apiCall must be provided.
              * @param {Function} [options.apiCall] - A custom function for making API calls. Either this or client must be provided.
@@ -345,6 +346,7 @@ export const request = {
                 async function appendInternal({
                     block_id,
                     children,
+                    after = null,
                     client,
                     apiCall,
                     getResults = (response) => response.results,
@@ -436,7 +438,8 @@ export const request = {
                             ) {
                                 callingFunction = async function (
                                     block_id,
-                                    children
+                                    children,
+                                    after
                                 ) {
                                     apiCallCount++;
                                     try {
@@ -444,6 +447,7 @@ export const request = {
                                             {
                                                 block_id: block_id,
                                                 children: children,
+                                                ...(after && after !== null && { after })
                                             }
                                         );
                                     } catch (error) {
