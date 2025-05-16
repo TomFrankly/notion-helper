@@ -66,7 +66,7 @@ export const request = {
      */
     pages: {
         /**
-         * Creates a new page in Notion and optionally appends child blocks to it. Uses request.blocks.children.append() for all child blocks, so it can handle nested blocks to any level.
+         * Creates a new page in Notion and optionally appends child blocks to it. Includes as many child blocks as possible in the initial request. Uses request.blocks.children.append() for all remaining child blocks, so it can handle nested blocks to any level.
          *
          * @function
          * @param {Object} options - The options for creating a page.
@@ -147,6 +147,58 @@ export const request = {
             if (data.children) {
                 pageChildren = [...data.children];
                 data.children = [];
+
+                const baseDataSize = new TextEncoder().encode(JSON.stringify(data)).length;
+                const MAX_PAYLOAD_SIZE = 450 * 1024;
+                let currentPayloadSize = baseDataSize;
+                let totalBlockCount = 0;
+
+                const hasNestedChildren = (block) => {
+                    if (!block[block.type]?.children?.length) return false;
+                    
+                    return block[block.type].children.some(child => 
+                        child[child.type]?.children?.length > 0
+                    );
+                };
+
+                const countBlocksIncludingChildren = (block) => {
+                    let count = 1;
+                    if (block[block.type]?.children?.length) {
+                        count += block[block.type].children.length;
+                    }
+                    return count;
+                };
+
+                for (let i = 0; i < pageChildren.length; i++) {
+                    const block = pageChildren[i];
+                    const blockSize = new TextEncoder().encode(JSON.stringify(block)).length;
+                    
+                    const wouldExceedPayload = currentPayloadSize + blockSize > MAX_PAYLOAD_SIZE;
+                    const wouldExceedBlockLimit = data.children.length >= CONSTANTS.MAX_BLOCKS;
+                    const wouldExceedTotalBlocks = totalBlockCount + countBlocksIncludingChildren(block) > CONSTANTS.MAX_BLOCKS_REQEST;
+                    const hasNestedChildren = hasNestedChildren(block);
+                    
+                    if (wouldExceedPayload || wouldExceedBlockLimit || wouldExceedTotalBlocks || hasNestedChildren) {
+
+                        pageChildren = pageChildren.slice(i);
+                        break;
+                    }
+
+                    data.children.push(block);
+                    currentPayloadSize += blockSize;
+                    totalBlockCount += countBlocksIncludingChildren(block);
+                }
+
+                const originalBlockCount = pageChildren.length + data.children.length;
+                const blocksIncluded = data.children.length;
+                const blocksRemaining = pageChildren.length;
+                const totalBlocksIncluded = totalBlockCount;
+
+                console.log(`Page creation optimization results:`);
+                console.log(`- Original block count: ${originalBlockCount}`);
+                console.log(`- Blocks included in initial request: ${blocksIncluded} (${totalBlocksIncluded} total blocks including children)`);
+                console.log(`- Blocks remaining for later appending: ${blocksRemaining}`);
+                console.log(`- Current payload size: ${(currentPayloadSize / 1024).toFixed(2)}KB`);
             }
 
             let callingFunction;
