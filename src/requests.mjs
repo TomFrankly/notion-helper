@@ -148,11 +148,7 @@ export const request = {
                 pageChildren = [...data.children];
                 data.children = [];
 
-                const baseDataSize = new TextEncoder().encode(JSON.stringify(data)).length;
-                const MAX_PAYLOAD_SIZE = 450 * 1024;
-                let currentPayloadSize = baseDataSize;
-                let totalBlockCount = 0;
-
+                // Helper function to check if a block or any of its children have children
                 const hasNestedChildren = (block) => {
                     if (!block[block.type]?.children?.length) return false;
                     
@@ -161,6 +157,7 @@ export const request = {
                     );
                 };
 
+                // Helper function to count total blocks including children
                 const countBlocksIncludingChildren = (block) => {
                     let count = 1;
                     if (block[block.type]?.children?.length) {
@@ -169,6 +166,11 @@ export const request = {
                     return count;
                 };
 
+                const baseDataSize = new TextEncoder().encode(JSON.stringify(data)).length;
+                const MAX_PAYLOAD_SIZE = 450 * 1024;
+                let currentPayloadSize = baseDataSize;
+                let totalBlockCount = 0;
+
                 for (let i = 0; i < pageChildren.length; i++) {
                     const block = pageChildren[i];
                     const blockSize = new TextEncoder().encode(JSON.stringify(block)).length;
@@ -176,10 +178,9 @@ export const request = {
                     const wouldExceedPayload = currentPayloadSize + blockSize > MAX_PAYLOAD_SIZE;
                     const wouldExceedBlockLimit = data.children.length >= CONSTANTS.MAX_BLOCKS;
                     const wouldExceedTotalBlocks = totalBlockCount + countBlocksIncludingChildren(block) > CONSTANTS.MAX_BLOCKS_REQEST;
-                    const hasNestedChildren = hasNestedChildren(block);
+                    const blockHasNestedChildren = hasNestedChildren(block);
                     
-                    if (wouldExceedPayload || wouldExceedBlockLimit || wouldExceedTotalBlocks || hasNestedChildren) {
-
+                    if (wouldExceedPayload || wouldExceedBlockLimit || wouldExceedTotalBlocks || blockHasNestedChildren) {
                         pageChildren = pageChildren.slice(i);
                         break;
                     }
