@@ -171,7 +171,8 @@ export const request = {
                 let currentPayloadSize = baseDataSize;
                 let totalBlockCount = 0;
 
-                for (let i = 0; i < pageChildren.length; i++) {
+                let i = 0;
+                for (; i < pageChildren.length; i++) {
                     const block = pageChildren[i];
                     const blockSize = new TextEncoder().encode(JSON.stringify(block)).length;
                     
@@ -181,7 +182,6 @@ export const request = {
                     const blockHasNestedChildren = hasNestedChildren(block);
                     
                     if (wouldExceedPayload || wouldExceedBlockLimit || wouldExceedTotalBlocks || blockHasNestedChildren) {
-                        pageChildren = pageChildren.slice(i);
                         break;
                     }
 
@@ -189,6 +189,8 @@ export const request = {
                     currentPayloadSize += blockSize;
                     totalBlockCount += countBlocksIncludingChildren(block);
                 }
+                // After the loop, set pageChildren to only the remaining blocks
+                pageChildren = pageChildren.slice(i);
 
                 const originalBlockCount = pageChildren.length + data.children.length;
                 const blocksIncluded = data.children.length;
