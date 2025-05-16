@@ -291,14 +291,10 @@ export const request = {
                     let count = 0
                     let currentPayloadSize = 0
 
-                    console.log(`Starting to create slices from ${arr.length} blocks. Max payload size: ${MAX_PAYLOAD_SIZE / 1024}KB`)
-
                     for (let block of arr) {
                         // Calculate the size of this block's JSON representation
                         const blockPayload = JSON.stringify(block)
                         const blockSize = new TextEncoder().encode(blockPayload).length
-                        
-                        console.log(`Block of type "${block.type}" has size: ${(blockSize / 1024).toFixed(2)}KB`)
 
                         const wouldExceedPayload = currentPayloadSize + blockSize > MAX_PAYLOAD_SIZE
                         const wouldExceedCount = count > 99
@@ -308,38 +304,29 @@ export const request = {
                         )
 
                         if (wouldExceedPayload || wouldExceedCount || hasTypeMismatch) {
-                            if (wouldExceedPayload) {
-                                console.log(`Creating new chunk: Would exceed payload limit (${((currentPayloadSize + blockSize) / 1024).toFixed(2)}KB > ${MAX_PAYLOAD_SIZE / 1024}KB)`)
-                            }
-                            if (wouldExceedCount) {
-                                console.log(`Creating new chunk: Would exceed block count (${count + 1} > 100)`)
-                            }
-                            if (hasTypeMismatch) {
-                                console.log(`Creating new chunk: Type mismatch (current: ${tempArr[0].type}, new: ${block.type})`)
-                            }
+                            
 
                             chunks.push(tempArr)
-                            console.log(`Pushed chunk of ${tempArr.length} blocks (${(currentPayloadSize / 1024).toFixed(2)}KB) to chunks array`)
+                            
                             
                             tempArr = []
                             tempArr.push(block)
                             count = 1
                             currentPayloadSize = blockSize
-                            console.log(`Started new chunk with block of type "${block.type}" (${(blockSize / 1024).toFixed(2)}KB)`)
+                            
                         } else {
                             tempArr.push(block)
                             count++
                             currentPayloadSize += blockSize
-                            console.log(`Added block to current chunk. Current size: ${(currentPayloadSize / 1024).toFixed(2)}KB, blocks: ${count}`)
+                            
                         }
                     }
 
                     if (tempArr.length > 0) {
                         chunks.push(tempArr)
-                        console.log(`Pushed final chunk of ${tempArr.length} blocks (${(currentPayloadSize / 1024).toFixed(2)}KB) to chunks array`)
+                        
                     }
 
-                    console.log(`Created ${chunks.length} total chunks`)
                     return chunks
                 }
                 
