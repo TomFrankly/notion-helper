@@ -166,6 +166,12 @@ export const request = {
                     return count;
                 };
 
+                // Helper function to check if any children array exceeds the maximum length
+                const hasExcessiveChildrenArray = (block) => {
+                    if (!block[block.type]?.children?.length) return false;
+                    return block[block.type].children.length > CONSTANTS.MAX_BLOCKS;
+                };
+
                 const baseDataSize = new TextEncoder().encode(JSON.stringify(data)).length;
                 const MAX_PAYLOAD_SIZE = 450 * 1024;
                 let currentPayloadSize = baseDataSize;
@@ -180,8 +186,9 @@ export const request = {
                     const wouldExceedBlockLimit = data.children.length >= CONSTANTS.MAX_BLOCKS;
                     const wouldExceedTotalBlocks = totalBlockCount + countBlocksIncludingChildren(block) > CONSTANTS.MAX_BLOCKS_REQEST;
                     const blockHasNestedChildren = hasNestedChildren(block);
+                    const blockHasExcessiveChildren = hasExcessiveChildrenArray(block);
                     
-                    if (wouldExceedPayload || wouldExceedBlockLimit || wouldExceedTotalBlocks || blockHasNestedChildren) {
+                    if (wouldExceedPayload || wouldExceedBlockLimit || wouldExceedTotalBlocks || blockHasNestedChildren || blockHasExcessiveChildren) {
                         break;
                     }
 
