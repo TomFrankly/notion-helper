@@ -1,4 +1,4 @@
-import { getDepth, getTotalCount, getLongestArray } from "./utils.mjs"
+import { getDepth, getTotalCount, getLongestArray, getPayloadSize } from "./utils.mjs"
 import CONSTANTS from "./constants.mjs";
 
 /**
@@ -148,7 +148,6 @@ export const request = {
                 pageChildren = [...data.children];
                 data.children = [];
 
-                // Helper function to check if a block or any of its children have children
                 const hasNestedChildren = (block) => {
                     if (!block[block.type]?.children?.length) return false;
                     
@@ -157,7 +156,6 @@ export const request = {
                     );
                 };
 
-                // Helper function to count total blocks including children
                 const countBlocksIncludingChildren = (block) => {
                     let count = 1;
                     if (block[block.type]?.children?.length) {
@@ -166,14 +164,13 @@ export const request = {
                     return count;
                 };
 
-                // Helper function to check if any children array exceeds the maximum length
                 const hasExcessiveChildrenArray = (block) => {
                     if (!block[block.type]?.children?.length) return false;
                     return block[block.type].children.length > CONSTANTS.MAX_BLOCKS;
                 };
 
                 const baseDataSize = new TextEncoder().encode(JSON.stringify(data)).length;
-                const MAX_PAYLOAD_SIZE = 450 * 1024;
+                const MAX_PAYLOAD_SIZE = CONSTANTS.MAX_PAYLOAD_SIZE;
                 let currentPayloadSize = baseDataSize;
                 let totalBlockCount = 0;
 
@@ -196,19 +193,9 @@ export const request = {
                     currentPayloadSize += blockSize;
                     totalBlockCount += countBlocksIncludingChildren(block);
                 }
-                // After the loop, set pageChildren to only the remaining blocks
+
                 pageChildren = pageChildren.slice(i);
 
-                const originalBlockCount = pageChildren.length + data.children.length;
-                const blocksIncluded = data.children.length;
-                const blocksRemaining = pageChildren.length;
-                const totalBlocksIncluded = totalBlockCount;
-
-                console.log(`Page creation optimization results:`);
-                console.log(`- Original block count: ${originalBlockCount}`);
-                console.log(`- Blocks included in initial request: ${blocksIncluded} (${totalBlocksIncluded} total blocks including children)`);
-                console.log(`- Blocks remaining for later appending: ${blocksRemaining}`);
-                console.log(`- Current payload size: ${(currentPayloadSize / 1024).toFixed(2)}KB`);
             }
 
             let callingFunction;
@@ -347,46 +334,52 @@ export const request = {
                 const specialTypes = ["column_list"]
 
                 function createSlices(arr) {
-                    const MAX_PAYLOAD_SIZE = 450 * 1024; // 450KB in bytes
+                    const MAX_PAYLOAD_SIZE = CONSTANTS.MAX_PAYLOAD_SIZE;
                     let chunks = []
                     let tempArr = []
                     let count = 0
                     let currentPayloadSize = 0
 
                     for (let block of arr) {
-                        // Calculate the size of this block's JSON representation
                         const blockPayload = JSON.stringify(block)
                         const blockSize = new TextEncoder().encode(blockPayload).length
 
+                        if (blockSize > MAX_PAYLOAD_SIZE) {
+                            
+                            if (tempArr.length > 0) {
+                                chunks.push(tempArr)
+                                tempArr = []
+                                count = 0
+                                currentPayloadSize = 0
+                            }
+
+                            chunks.push([block])
+                            continue
+                        }
+
                         const wouldExceedPayload = currentPayloadSize + blockSize > MAX_PAYLOAD_SIZE
                         const wouldExceedCount = count > 99
-                        const hasTypeMismatch = tempArr.length > 0 && (
+
+                        const hasTypeMismatch = tempArr.length > 0 && block && (
                             (specialTypes.includes(block.type) && !specialTypes.includes(tempArr[0].type)) ||
                             (!specialTypes.includes(block.type) && specialTypes.includes(tempArr[0].type))
                         )
 
                         if (wouldExceedPayload || wouldExceedCount || hasTypeMismatch) {
-                            
-
                             chunks.push(tempArr)
-                            
-                            
                             tempArr = []
                             tempArr.push(block)
                             count = 1
                             currentPayloadSize = blockSize
-                            
                         } else {
                             tempArr.push(block)
                             count++
                             currentPayloadSize += blockSize
-                            
                         }
                     }
 
                     if (tempArr.length > 0) {
                         chunks.push(tempArr)
-                        
                     }
 
                     return chunks
@@ -410,6 +403,7 @@ export const request = {
                     let allResponses = [];
 
                     try {
+                        
                         const chunks = createSlices(children)
                         
                         for (let chunk of chunks) {
@@ -437,16 +431,19 @@ export const request = {
                                     const type = block.type;
     
                                     if (
+                                        block[type] &&
                                         block[type].children &&
                                         block[type].children.length > 0
                                     ) {
                                         const blockMaxDepth = getDepth(block[type].children, 1)
                                         const blockMaxChildArrayLength = getLongestArray(block[type].children)
                                         const blockTotalChildBlockCount = getTotalCount(block[type].children)
+                                        const blockPayloadSize = getPayloadSize(block[type].children)
 
                                         if (
                                             blockMaxDepth <= maxDepthLimit &&
                                             blockMaxChildArrayLength <= maxChildArrayLimit &&
+                                            blockPayloadSize <= MAX_PAYLOAD_SIZE &&
                                             blocksUsed + blockTotalChildBlockCount < blockLimit - 100 // Leave buffer for required children of table blocks
                                         ) {
                                             blocksUsed += blockTotalChildBlockCount

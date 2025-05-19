@@ -248,3 +248,20 @@ export function getLongestArray(arr, count = 0) {
 
     return maxLength
 }
+
+/**
+ * Gets the size in bytes of a block array when converted to JSON.
+ * Used to ensure API requests don't exceed Notion's payload size limits.
+ * 
+ * @param {Array<Object>} arr - The array of block objects to measure
+ * @returns {number} Size in bytes
+ */
+export function getPayloadSize(arr) {
+    if (!arr || !Array.isArray(arr)) return 0;
+    
+    const size = arr.reduce((acc, block) => {
+        return acc + new TextEncoder().encode(JSON.stringify(block)).length;
+    }, 0);
+    
+    return size;
+}

@@ -786,6 +786,41 @@ export function createNotion({
         },
 
         /**
+         * Adds an existing Notion block to the current level in the block hierarchy.
+         * This method is useful when you have a pre-constructed Notion block that you want to add directly.
+         *
+         * @param {Object} existingBlock - A valid Notion block object to add.
+         * @returns {this} The builder instance for method chaining.
+         * @example
+         * // Add a pre-constructed paragraph block
+         * const myBlock = {
+         *   type: "paragraph",
+         *   paragraph: {
+         *     rich_text: [{ type: "text", text: { content: "Hello" } }]
+         *   }
+         * };
+         * notion.addExistingBlock(myBlock);
+         */
+        addExistingBlock(existingBlock) {
+            if (!existingBlock || typeof existingBlock !== 'object' || !existingBlock.type) {
+                if (strict === true) {
+                    const error = `Invalid block provided to addExistingBlock():\n\nBlock: ${JSON.stringify(existingBlock)}\n\nStrict mode is enabled, so this method is throwing an error.`;
+                    console.error(error);
+                    throw new Error(error);
+                } else {
+                    const warning = `Invalid block provided to addExistingBlock():\n\nBlock: ${JSON.stringify(existingBlock)}\n\nStrict mode is disabled, so this method call will simply be ignored.`;
+                    console.warn(warning);
+                    nullParent = true;
+                    return this;
+                }
+            }
+
+            currentBlockStack[currentBlockStack.length - 1].children.push(existingBlock);
+            hasBlock = true;
+            return this;
+        },
+
+        /**
          * Adds a blank paragraph block to the current level in the block hierarchy.
          *
          * @returns {this} The builder instance for method chaining.

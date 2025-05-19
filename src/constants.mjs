@@ -3,6 +3,7 @@ const CONSTANTS = {
     MAX_BLOCKS: 100,
     MAX_BLOCKS_REQEST: 999,
     MAX_CHILD_ARRAY_DEPTH: 2,
+    MAX_PAYLOAD_SIZE: 450000, // 450kb
     IMAGE_SUPPORT: {
         FORMATS: [
             'bmp', 'gif', 'heic', 'jpeg', 'jpg', 'png', 'svg', 'tif', 'tiff'
