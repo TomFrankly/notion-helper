@@ -3,18 +3,55 @@ import { enforceStringLength, isValidURL } from "./utils.mjs";
 /**
  * Builds a Rich Text Object. See: https://developers.notion.com/reference/rich-text
  * @param {(string|Object)} input - The text content or input object. If string, the input can be normal text or an equation. If object, it can be a text, equation, or mention object.
- * @param {Object} annotations - Options for the Annotation object.
- * @param {boolean} annotations.bold - Bold text
- * @param {boolean} annotations.italic - Italic text
- * @param {boolean} annotations.strikethrough - Strikethrough text
- * @param {boolean} annotations.underline - Underlined text
- * @param {boolean} annotations.code - Code-style text
- * @param {string} annotations.color - String specifying the text's color or background color. Opts: "blue", "brown", "default", "gray", "green", "orange", "pink", "purple", "red", "yellow". All except "default" can also be used as a background color with "[color]_background" - example: "blue_background". See: https://developers.notion.com/reference/rich-text#the-annotation-object
- * @param {string} url - The URL for this object, if any. Creates a clickable link.
- * @param {string} [type=text] - An optional type for the Rich Text Object. Supports text, equation, and mention.
+ * @param {Object} [options] - Options for configuring the rich text object
+ * @param {Object} [options.annotations] - Options for the Annotation object
+ * @param {boolean} [options.annotations.bold] - Bold text
+ * @param {boolean} [options.annotations.italic] - Italic text
+ * @param {boolean} [options.annotations.strikethrough] - Strikethrough text
+ * @param {boolean} [options.annotations.underline] - Underlined text
+ * @param {boolean} [options.annotations.code] - Code-style text
+ * @param {string} [options.annotations.color] - String specifying the text's color or background color. Options: "blue", "brown", "default", "gray", "green", "orange", "pink", "purple", "red", "yellow". All except "default" can also be used as a background color with "[color]_background" - example: "blue_background". See: https://developers.notion.com/reference/rich-text#the-annotation-object
+ * @param {string} [options.url] - The URL for this object, if any. Creates a clickable link.
+ * @param {string} [options.type="text"] - An optional type for the Rich Text Object. Supports text, equation, and mention.
  * @returns {Array<Object>} - Array with a single Rich Text Object
+ * 
+ * @example
+ * // Simple text
+ * buildRichTextObj("Hello World")
+ * 
+ * // Text with URL
+ * buildRichTextObj("Watch this very important video", { url: "https://www.youtube.com/watch?v=dQw4w9WgXcQ" })
+ * 
+ * // Text with annotations
+ * buildRichTextObj("Bold and brown", { 
+ *   annotations: { bold: true, color: "brown" }
+ * })
+ * 
+ * // Text with URL and annotations
+ * buildRichTextObj("Bold blue link", {
+ *   url: "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+ *   annotations: { bold: true, color: "blue" }
+ * })
+ * 
+ * // Equation
+ * buildRichTextObj("E = mc^2", { type: "equation" })
+ * 
+ * // Mention
+ * buildRichTextObj({ type: "user", user: { id: "user_id" } }, { type: "mention" })
  */
-export function buildRichTextObj(input, annotations = {}, url, type = "text") {
+export function buildRichTextObj(input, options = {}) {
+    // Handle backwards compatibility
+    if (arguments.length > 1 && !options.url && !options.type && !options.annotations) {
+        // If second argument is not an options object, treat it as annotations
+        options = {
+            annotations: arguments[1],
+            url: arguments[2],
+            type: arguments[3] || "text"
+        };
+    }
+
+    const { annotations = {}, url, type = "text" } = options;
+
     if (typeof input === "string") {
         switch (type) {
             case "text":
@@ -121,10 +158,12 @@ export function enforceRichText(content) {
             return buildRichTextObj(
                 plainString,
                 {
-                    bold: isBold || isBoldItalic,
-                    italic: isItalic || isBoldItalic,
-                },
-                isURL ? plainString : null
+                    annotations: {
+                        bold: isBold || isBoldItalic,
+                        italic: isItalic || isBoldItalic,
+                    },
+                    url: isURL ? plainString : null,
+                }
             );
         });
 

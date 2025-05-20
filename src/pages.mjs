@@ -179,7 +179,7 @@ export function quickPages({ parent, parent_type, pages, schema, childrenFn }) {
  */
 
 /**
- * A factory function that provides methods for building Notion objects, including pages, properties, and blocks. It adds an unhealthily-large spoonful of syntactic sugar onto the Notion API.
+ * Creates a fluent interface builder for constructing Notion objects, including pages, properties, and blocks. It adds an unhealthily-large spoonful of syntactic sugar onto the Notion API.
  *
  * Returns an object with two possible properties:
  *
@@ -192,7 +192,7 @@ export function quickPages({ parent, parent_type, pages, schema, childrenFn }) {
  * After adding all your blocks and properties, call build() to return the final object. It can be passed directly as the data object in Notion API requests.
  *
  * @namespace
- * @function createNotion
+ * @function createNotionBuilder
  * @param {boolean} [strict=false] If true, the builder will throw errors when passed invalid or null data. Otherwise, it will try to gracefully return, and strip out, null properties and blocks.
  * @param {number} [limitNesting=true] If true, limits the number of nested children block arrays to 2, which is the limit for a single Notion API request. Can be set to false if you're using the appendBlocks() or createPage() functions, which will recursively append nested children block arrays in subsequent API calls.
  * @param {boolean} [limitChildren=true] If true, the final content object's children array will have a maximum of 100 blocks, and the rest will be put into the additionalBlocks array in chunks of 100. If false, the content object will contain all child blocks.
@@ -200,7 +200,7 @@ export function quickPages({ parent, parent_type, pages, schema, childrenFn }) {
  * @returns {NotionBuilder} A builder object with methods for constructing and managing Notion content. The builder includes methods to set page and property details, add various block types, manage nested structures, and ultimately build Notion-compatible objects.
  *
  * @example
- * const notionBuilder = createNotion();
+ * const notionBuilder = createNotionBuilder();
  *
  * // Build a new Notion page with various blocks
  * const result = notionBuilder
@@ -217,7 +217,7 @@ export function quickPages({ parent, parent_type, pages, schema, childrenFn }) {
  * // Create a page in Notion with the result (assumes you've installed and imported the Notion SDK and instantiated a client bound to a 'notion' variable)
  * const response = await notion.pages.create(result.content)
  */
-export function createNotion({
+export function createNotionBuilder({
     strict = false,
     limitNesting = true,
     limitChildren = true,
@@ -409,12 +409,12 @@ export function createNotion({
                 value === null
             ) {
                 if (strict === true) {
-                    const error = `Null or invalid property name, type, or value provided.\n\nName: ${name}\nType: ${type}\nValue: ${value}\n\nStrict mode is enabled, so cannot construct property object. Disable strict mode in createNotion() to simply ignore this property method call.`;
+                    const error = `Null or invalid property name, type, or value provided.\n\nName: ${name}\nType: ${type}\nValue: ${value}\n\nStrict mode is enabled, so cannot construct property object. Disable strict mode in createNotionBuilder() to simply ignore this property method call.`;
                     console.error(error);
                     throw new Error(error);
                 } else {
                     console.warn(
-                        `Null or invalid property name, type, or value provided.\n\nName: ${name}\nType: ${type}\nValue: ${value}\n\nThis method call will be ignored. You can instead cause createNotion() to throw an error in instance like these by calling createNotion(strict = true)`
+                        `Null or invalid property name, type, or value provided.\n\nName: ${name}\nType: ${type}\nValue: ${value}\n\nThis method call will be ignored. You can instead cause createNotionBuilder() to throw an error in instance like these by calling createNotionBuilder(strict = true)`
                     );
                     return this;
                 }
@@ -662,7 +662,7 @@ export function createNotion({
                 )
             ) {
                 if (strict === true) {
-                    const error = `Null/undefined block type, or null/undefined options provided to startParent():\n\nBlock type: ${blockType}\nOptions: ${options}\n\nStrict mode is enabled, so this method is throwing an error. You can call createNotion() without the strict argument if you\'d just like this method call to be ignored instead.`;
+                    const error = `Null/undefined block type, or null/undefined options provided to startParent():\n\nBlock type: ${blockType}\nOptions: ${options}\n\nStrict mode is enabled, so this method is throwing an error. You can call createNotionBuilder() without the strict argument if you\'d just like this method call to be ignored instead.`;
                     console.error(error);
                     throw new Error(error);
                 } else {
@@ -766,7 +766,7 @@ export function createNotion({
                 )
             ) {
                 if (strict === true) {
-                    const error = `Null/undefined block type, or null/undefined options provided to addBlock():\n\nBlock type: ${blockType}\nOptions: ${options}\n\nStrict mode is enabled, so this method is throwing an error. You can call createNotion() without the strict argument if you\'d just like this method call to be ignored instead.`;
+                    const error = `Null/undefined block type, or null/undefined options provided to addBlock():\n\nBlock type: ${blockType}\nOptions: ${options}\n\nStrict mode is enabled, so this method is throwing an error. You can call createNotionBuilder() without the strict argument if you\'d just like this method call to be ignored instead.`;
                     console.error(error);
                     throw new Error(error);
                 } else {
@@ -848,7 +848,7 @@ export function createNotion({
          *
          * If you allow for blank paragraph blocks, calling .paragraph("") or .paragraph()
          * will add a blank paragraph block to the current stack. You can do this with
-         * createNotion({ allowBlankParagraphs: true }).
+         * createNotionBuilder({ allowBlankParagraphs: true }).
          *
          * If allowBlankParagraphs is false (the default):
          * - In strict mode, an error will be thrown.
@@ -1277,7 +1277,7 @@ export function createNotion({
          * @property {Array} additionalBlocks - Any blocks that exceed Notion's maximum block limit per request. These will need to be added in subsequent requests.
          * @throws {Error} If no data was added to the builder.
          * @example
-         * const notion = createNotion();
+         * const notion = createNotionBuilder();
          * const result = notion
          *   .dbId('your-database-id')
          *   .title('Page Title', 'My New Page')
@@ -1382,7 +1382,7 @@ export function createNotion({
          *
          * @returns {this} The builder instance for method chaining.
          * @example
-         * const notion = createNotion();
+         * const notion = createNotionBuilder();
          * notion
          *   .dbId('your-database-id')
          *   .title('Page Title', 'My New Page')
@@ -1402,4 +1402,19 @@ export function createNotion({
     };
 
     return builder;
+}
+
+/**
+ * @deprecated Use createNotionBuilder() instead. This function is maintained for backwards compatibility.
+ * @function createNotion
+ * @param {Object} options - The options for creating a Notion builder.
+ * @param {boolean} [options.strict=false] If true, the builder will throw errors when passed invalid or null data.
+ * @param {number} [options.limitNesting=true] If true, limits the number of nested children block arrays to 2.
+ * @param {boolean} [options.limitChildren=true] If true, the final content object's children array will have a maximum of 100 blocks.
+ * @param {boolean} [options.allowBlankParagraphs=false] If true, calling .paragraph("") will result in an empty paragraph block.
+ * @returns {NotionBuilder} A builder object with methods for constructing and managing Notion content.
+ */
+export function createNotion(options) {
+    console.warn('createNotion() is deprecated. Please use createNotionBuilder() instead.');
+    return createNotionBuilder(options);
 }

@@ -20,7 +20,7 @@ import {
 /**
  * Object with methods to construct the majority of block types supported by the Notion API.
  *
- * Block types include bookmark, breadcrumb, bulleted list item, callout, code, column_list, column, divider, embed, file, heading, image, numbered list item, paragraph, pdf, quote, table, table row, table of contents, to-do, toggle, and video. Some block types return null if they are provided with invalid data; you should filter these out your final children array.
+ * Block types include audio, bookmark, breadcrumb, bulleted list item, callout, code, column_list, column, divider, embed, file, heading, image, numbered list item, paragraph, pdf, quote, table, table row, table of contents, to-do, toggle, and video. Some block types return null if they are provided with invalid data; you should filter these out your final children array.
  *
  * Not supported: Link preview, synced block. Equation and Mention are supported within the buildRichTextObj() function, not here.
  *

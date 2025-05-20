@@ -19,7 +19,7 @@ const CONSTANTS = {
     },
     AUDIO_SUPPORT: {
         FORMATS: [
-            'mp3', 'wav', 'ogg', 'mid', 'midi', 'wma', 'aac'
+            'mp3', 'wav', 'ogg', 'mid', 'midi', 'wma', 'aac', 'm4a', 'm4b'
         ],
     },
     DOCUMENT_SUPPORT: {
