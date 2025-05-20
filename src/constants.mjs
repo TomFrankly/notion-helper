@@ -16,7 +16,17 @@ const CONSTANTS = {
         SITES: [
             'youtube.com'
         ]
-    }
+    },
+    AUDIO_SUPPORT: {
+        FORMATS: [
+            'mp3', 'wav', 'ogg', 'mid', 'midi', 'wma', 'aac'
+        ],
+    },
+    DOCUMENT_SUPPORT: {
+        FORMATS: [
+            'pdf', 'json', 'txt'
+        ],
+    },
 }
 
 export default CONSTANTS

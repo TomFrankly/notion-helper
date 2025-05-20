@@ -2,9 +2,11 @@ import { buildRichTextObj, enforceRichText } from "./rich-text.mjs";
 import { setIcon } from "./emoji-and-files.mjs";
 import {
     isValidURL,
+    isValidUUID,
     validateImageURL,
     validatePDFURL,
     validateVideoURL,
+    validateAudioURL,
     enforceStringLength,
 } from "./utils.mjs";
 
@@ -25,6 +27,68 @@ import {
  * @namespace
  */
 export const block = {
+    /**
+     * Methods for audio blocks.
+     *
+     * @namespace
+     * @property {boolean} supports_children - Indicates if the block supports child blocks.
+     */
+    audio: {
+        /**
+         * Indicates if the block supports child blocks.
+         * @type {boolean}
+         */
+        supports_children: false,
+        /**
+         * Creates an audio block.
+         *
+         * @function
+         * @param {string|Object} options - A string representing the audio URL, a file upload ID, or an options object.
+         * @param {string} options.urlOrId - The URL for the audio, or the ID of the file upload.
+         * @param {string|string[]|Array<Object>} [options.caption=[]] - The caption as a string, an array of strings, or an array of rich text objects.
+         * @returns {Object|null} An audio block object compatible with Notion's API, or null if the URL/ID is invalid.
+         * @example
+         * // Use with a string
+         * const simpleAudio = block.audio.createBlock("https://thomasjfrank.com/wp-content/uploads/2025/05/output3.mp3");
+         * 
+         * // Use with a file upload ID
+         * const fileUploadAudio = block.audio.createBlock("123e4567-e89b-12d3-a456-426614174000");
+         *
+         * // Use with options object
+         * const complexAudio = block.audio.createBlock({
+         *   urlOrId: "https://thomasjfrank.com/wp-content/uploads/2025/05/output3.mp3",
+         *   caption: "Check out my mixtape, man."
+         * });
+         */
+        createBlock: (options) => {
+            let urlOrId, caption;
+            if (typeof options === "string") {
+                urlOrId = options;
+                caption = [];
+            } else {
+                ({ urlOrId, caption = [] } = options);
+            }
+            const isValidAudio = validateAudioURL(urlOrId) || isValidUUID(urlOrId);
+            const isFileUpload = isValidUUID(urlOrId);
+            const isExternal = isValidURL(urlOrId);
+
+            const audioType = isFileUpload ? "file_upload" : isExternal ? "external" : "file";
+
+            return isValidAudio
+                ? {
+                      type: "audio",
+                      audio: {
+                          type: audioType,
+                          [audioType]: {
+                              [audioType === "file_upload" ? "id" : "url"]: urlOrId,
+                          },
+                          caption: enforceRichText(caption),
+                      },
+                  }
+                : null;
+        },
+    },
+    
     /**
      * Methods for bookmark blocks.
      *
@@ -620,39 +684,47 @@ export const block = {
          * Creates a file block.
          *
          * @function
-         * @param {string|Object} options - A string representing the file URL, or an options object.
-         * @param {string} options.url - The URL for the file.
+         * @param {string|Object} options - A string representing the file URL, a file upload ID, or an options object.
+         * @param {string} options.urlOrId - The URL for the file, or the ID of the file upload.
          * @param {string} [options.name] - The name of the file.
          * @param {string|string[]|Array<Object>} [options.caption=[]] - The caption as a string, an array of strings, or an array of rich text objects.
-         * @returns {Object|null} A file block object compatible with Notion's API, or null if the URL is invalid.
+         * @returns {Object|null} A file block object compatible with Notion's API, or null if the URL/ID is invalid.
          * @example
          * // Use with a string
          * const simpleFile = block.file.createBlock("https://collegeinfogeek.com/wp-content/uploads/2015/01/10steps-reddit.pdf");
          *
+         * // Use with a file upload ID
+         * const fileUploadFile = block.file.createBlock("123e4567-e89b-12d3-a456-426614174000");
+         *
          * // Use with options object
          * const complexFile = block.file.createBlock({
-         *   url: "https://collegeinfogeek.com/wp-content/uploads/2015/01/10steps-reddit.pdf",
+         *   urlOrId: "https://collegeinfogeek.com/wp-content/uploads/2015/01/10steps-reddit.pdf",
          *   name: "10 Steps to Earning Awesome Grades (preview)",
          *   caption: "The Reddit preview of the 10 Steps to Earning Awesome Grades book."
          * });
          */
         createBlock: (options) => {
-            let url, name, caption;
+            let urlOrId, name, caption;
             if (typeof options === "string") {
-                url = options;
+                urlOrId = options;
                 name = "";
                 caption = [];
             } else {
-                ({ url, name = "", caption = [] } = options);
+                ({ urlOrId, name = "", caption = [] } = options);
             }
-            const isValid = isValidURL(url);
+            const isValid = isValidURL(urlOrId) || isValidUUID(urlOrId);
+            const isFileUpload = isValidUUID(urlOrId);
+            const isExternal = isValidURL(urlOrId);
+
+            const fileType = isFileUpload ? "file_upload" : isExternal ? "external" : "file";
+
             return isValid
                 ? {
                       type: "file",
                       file: {
-                          type: "external",
-                          external: {
-                              url: url,
+                          type: fileType,
+                          [fileType]: {
+                              [fileType === "file_upload" ? "id" : "url"]: urlOrId,
                           },
                           caption: enforceRichText(caption),
                           name: name && name !== "" ? name : undefined,
@@ -873,36 +945,44 @@ export const block = {
          * Creates an image block.
          *
          * @function
-         * @param {string|Object} options - A string representing the image URL, or an options object.
-         * @param {string} options.url - The URL for the image.
+         * @param {string|Object} options - A string representing the image URL, a file upload ID, or an options object.
+         * @param {string} options.urlOrId - The URL for the image, or the ID of the file upload.
          * @param {string|string[]|Array<Object>} [options.caption=[]] - The caption as a string, an array of strings, or an array of rich text objects.
-         * @returns {Object|null} An image block object compatible with Notion's API, or null if the URL is invalid.
+         * @returns {Object|null} An image block object compatible with Notion's API, or null if the URL/ID is invalid.
          * @example
          * // Use with a string
          * const simpleImage = block.image.createBlock("https://i.imgur.com/5vSShIw.jpeg");
+         * 
+         * // Use with a file upload ID
+         * const fileUploadImage = block.image.createBlock("123e4567-e89b-12d3-a456-426614174000");
          *
          * // Use with options object
          * const complexImage = block.image.createBlock({
-         *   url: "https://i.imgur.com/5vSShIw.jpeg",
+         *   urlOrId: "https://i.imgur.com/5vSShIw.jpeg",
          *   caption: "A beautiful landscape"
          * });
          */
         createBlock: (options) => {
-            let url, caption;
+            let urlOrId, caption;
             if (typeof options === "string") {
-                url = options;
+                urlOrId = options;
                 caption = [];
             } else {
-                ({ url, caption = [] } = options);
+                ({ urlOrId, caption = [] } = options);
             }
-            const isValidImage = validateImageURL(url);
+            const isValidImage = validateImageURL(urlOrId) || isValidUUID(urlOrId);
+            const isFileUpload = isValidUUID(urlOrId);
+            const isExternal = isValidURL(urlOrId);
+
+            const imageType = isFileUpload ? "file_upload" : isExternal ? "external" : "file";
+
             return isValidImage
                 ? {
                       type: "image",
                       image: {
-                          type: "external",
-                          external: {
-                              url: url,
+                          type: imageType,
+                          [imageType]: {
+                              [imageType === "file_upload" ? "id" : "url"]: urlOrId,
                           },
                           caption: enforceRichText(caption),
                       },
@@ -1053,36 +1133,44 @@ export const block = {
          * Creates a PDF block.
          *
          * @function
-         * @param {string|Object} options - A string representing the PDF URL, or an options object.
-         * @param {string} options.url - The URL for the PDF.
+         * @param {string|Object} options - A string representing the PDF URL, a file upload ID, or an options object.
+         * @param {string} options.urlOrId - The URL for the PDF, or the ID of the file upload.
          * @param {string|string[]|Array<Object>} [options.caption=[]] - The caption as a string, an array of strings, or an array of rich text objects.
-         * @returns {Object|null} A PDF block object compatible with Notion's API, or null if the URL is invalid.
+         * @returns {Object|null} A PDF block object compatible with Notion's API, or null if the URL/ID is invalid.
          * @example
          * // Use with a string
          * const simplePDF = block.pdf.createBlock("https://collegeinfogeek.com/wp-content/uploads/2015/01/10steps-reddit.pdf");
          *
+         * // Use with a file upload ID
+         * const fileUploadPDF = block.pdf.createBlock("123e4567-e89b-12d3-a456-426614174000");
+         *
          * // Use with options object
          * const complexPDF = block.pdf.createBlock({
-         *   url: "https://collegeinfogeek.com/wp-content/uploads/2015/01/10steps-reddit.pdf",
+         *   urlOrId: "https://collegeinfogeek.com/wp-content/uploads/2015/01/10steps-reddit.pdf",
          *   caption: "The Reddit preview of the 10 Steps to Earning Awesome Grades book."
          * });
          */
         createBlock: (options) => {
-            let url, caption;
+            let urlOrId, caption;
             if (typeof options === "string") {
-                url = options;
+                urlOrId = options;
                 caption = [];
             } else {
-                ({ url, caption = [] } = options);
+                ({ urlOrId, caption = [] } = options);
             }
-            const isValidPDF = validatePDFURL(url);
+            const isValidPDF = validatePDFURL(urlOrId) || isValidUUID(urlOrId);
+            const isFileUpload = isValidUUID(urlOrId);
+            const isExternal = isValidURL(urlOrId);
+
+            const pdfType = isFileUpload ? "file_upload" : isExternal ? "external" : "file";
+
             return isValidPDF
                 ? {
                       type: "pdf",
                       pdf: {
-                          type: "external",
-                          external: {
-                              url: url,
+                          type: pdfType,
+                          [pdfType]: {
+                              [pdfType === "file_upload" ? "id" : "url"]: urlOrId,
                           },
                           caption: enforceRichText(caption),
                       },
@@ -1452,36 +1540,44 @@ export const block = {
          * Creates a video block.
          *
          * @function
-         * @param {string|Object} options - A string representing the video URL, or an options object.
-         * @param {string} options.url - The URL for the video.
+         * @param {string|Object} options - A string representing the video URL, a file upload ID, or an options object.
+         * @param {string} options.urlOrId - The URL for the video, or the ID of the file upload.
          * @param {string|string[]|Array<Object>} [options.caption=[]] - The caption as a string, an array of strings, or an array of rich text objects.
-         * @returns {Object|null} A video block object compatible with Notion's API, or null if the URL is invalid.
+         * @returns {Object|null} A video block object compatible with Notion's API, or null if the URL/ID is invalid.
          * @example
          * // Use with a string
          * const simpleVideo = block.video.createBlock("https://www.youtube.com/watch?v=ec5m6t77eYM");
+         * 
+         * // Use with a file upload ID
+         * const fileUploadVideo = block.video.createBlock("123e4567-e89b-12d3-a456-426614174000");
          *
          * // Use with options object
          * const complexVideo = block.video.createBlock({
-         *   url: "https://www.youtube.com/watch?v=ec5m6t77eYM",
+         *   urlOrId: "https://www.youtube.com/watch?v=ec5m6t77eYM",
          *   caption: "Never gonna give you up"
          * });
          */
         createBlock: (options) => {
-            let url, caption;
+            let urlOrId, caption;
             if (typeof options === "string") {
-                url = options;
+                urlOrId = options;
                 caption = [];
             } else {
-                ({ url, caption = [] } = options);
+                ({ urlOrId, caption = [] } = options);
             }
-            const isValidVideo = validateVideoURL(url);
+            const isValidVideo = validateVideoURL(urlOrId) || isValidUUID(urlOrId);
+            const isFileUpload = isValidUUID(urlOrId);
+            const isExternal = isValidURL(urlOrId);
+
+            const videoType = isFileUpload ? "file_upload" : isExternal ? "external" : "file";
+
             return isValidVideo
                 ? {
                       type: "video",
                       video: {
-                          type: "external",
-                          external: {
-                              url: url,
+                          type: videoType,
+                          [videoType]: {
+                              [videoType === "file_upload" ? "id" : "url"]: urlOrId,
                           },
                           caption: enforceRichText(caption),
                       },
@@ -1499,6 +1595,17 @@ export const block = {
  * Block shorthand methods – these allow you to call the createBlock() method for the properties of the block object more quickly. Import them directly into a file, or call them on NotionHelper.
  * @namespace BlockShorthand
  */
+
+/**
+ * Creates an audio block.
+ * @memberof BlockShorthand
+ * @param {string|Object} options - A string representing the audio URL, or an options object.
+ * @see block.audio for full documentation
+ * @returns {Object|null} An audio block or null if the URL is invalid.
+ */
+export function audio(options) {
+    return block.audio.createBlock(options);
+}
 
 /**
  * Creates a bookmark block.

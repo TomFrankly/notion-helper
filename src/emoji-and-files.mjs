@@ -1,4 +1,4 @@
-import { isSingleEmoji, isValidURL, validateImageURL } from "./utils.mjs"
+import { isSingleEmoji, isValidURL, validateImageURL, isValidUUID } from "./utils.mjs"
 
 /**
  * 
@@ -12,11 +12,14 @@ export function setIcon(value) {
     
     const isEmoji = isSingleEmoji(value)
     const isImageURL = validateImageURL(value)
-
+    const isUUID = isValidUUID(value)
+    
     if (isImageURL) {
         return createExternal(value)
     } else if (isEmoji) {
         return createEmoji(value)
+    } else if (isUUID) {
+        return createFile(value)
     } else {
         return undefined
     }
@@ -53,14 +56,14 @@ export function createEmoji(emoji) {
 /**
  * Creates a representation of a file link.
  * 
- * @param {string} url - The URL of the file.
- * @returns {Object} An object containing the file URL.
+ * @param {string} id - The ID of the file.
+ * @returns {Object} An object containing the file ID.
  */
-function createFile(url) {
+function createFile(id) {
     return {
-        type: "file",
-        file: {
-            url: url
+        type: "file_upload",
+        file_upload: {
+            id: id
         }
     }
 }

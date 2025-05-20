@@ -1121,6 +1121,15 @@ export function createNotion({
         },
 
         /**
+         * Adds an audio block to the current stack.
+         * @returns {this} The builder instance for method chaining.
+         * @see block.audio.createBlock for full documentation
+         */
+        audio(options) {
+            return this.addBlock("audio", options);
+        },
+
+        /**
          * Adds a file block to the current stack.
          * @returns {this} The builder instance for method chaining.
          * @see block.file.createBlock for full documentation

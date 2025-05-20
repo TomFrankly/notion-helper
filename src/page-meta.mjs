@@ -1,6 +1,6 @@
 import { setIcon } from "./emoji-and-files.mjs";
 import { enforceRichText } from "./rich-text.mjs";
-import { isValidURL, validateDate } from "./utils.mjs";
+import { isValidURL, isValidUUID, validateDate } from "./utils.mjs";
 
 /**
  * Object with methods for constructing Notion page metadata, including parent, page, block, property, cover, and icon.
@@ -337,37 +337,50 @@ export const page_props = {
         /**
          * Sets a files property's value.
          * @function
-         * @param {(string|Array<string|Array<string>|Object>|Object)} files - A url string, an array of url strings, an array of [url, name] arrays, an array of file objects, or a single file object. File objects can be simple ({ name, url }) or fully constructed ({ name, external: { url }})
-         * @param {string} [fileName] - a name for a singular file. Used if a string value is passed for the files parameter. If not provided, the file's URL will be used for the name.
+         * @param {(string|Array<string|Array<string>|Object>|Object)} files - A url/file ID string, an array of url/file ID strings, an array of [url/file ID, name] arrays, an array of file objects, or a single file object. File objects can be simple - ({ name, url }) or ({ name, id }) - or fully constructed ({ name, external: { url }}) or ({ name, file_upload: { id }})
+         * @param {string} [fileName] - a name for a singular file. Used if a string value is passed for the files parameter. If not provided, the file's URL/ID will be used for the name.
          * @returns {Object} A files property object.
          */
         setProp: (files, fileName) => {
             const processFile = (file) => {
                 if (typeof file === "string") {
-                    if (!validateValue(file, "url")) {
+                    const isValidFile = validateValue(file, "url") || validateValue(file, "UUID");
+                    const isFileUpload = validateValue(file, "UUID");
+                    const isExternal = validateValue(file, "url");
+
+                    const fileType = isFileUpload ? "file_upload" : isExternal ? "external" : "file";
+                    const needsName = fileType === "external" || (fileType === "file" && fileName);
+                    
+                    if (!isValidFile) {
                         return null;
                     } else {
                         return {
-                            name:
-                                fileName && fileName !== ""
-                                    ? validateValue(fileName, "string")
-                                    : validateValue(file, "string"),
-                            external: {
-                                url: validateValue(file, "url"),
+                            ...(needsName && { name: fileName && fileName !== ""
+                                ? validateValue(fileName, "string")
+                                : validateValue(file, "string") }),
+                            [fileType]: {
+                                [fileType === "file_upload" ? "id" : "url"]: file,
                             },
                         };
                     }
                 } else if (Array.isArray(file) && file.length === 2) {
-                    const [url, name] = file;
-                    if (!validateValue(url, "url")) {
+                    const [urlOrId, name] = file;
+                    const isValidFile = validateValue(urlOrId, "url") || validateValue(urlOrId, "UUID");
+                    const isFileUpload = validateValue(urlOrId, "UUID");
+                    const isExternal = validateValue(urlOrId, "url");
+
+                    const fileType = isFileUpload ? "file_upload" : isExternal ? "external" : "file";
+                    const needsName = fileType === "external" || (fileType === "file" && name);
+
+                    if (!isValidFile) {
                         return null;
                     } else {
                         return {
-                            name: validateValue(name, "string")
+                            ...(needsName && { name: validateValue(name, "string")
                                 ? validateValue(name, "string")
-                                : validateValue(url, "url"),
-                            external: {
-                                url: validateValue(url, "url"),
+                                : validateValue(urlOrId, "string") }),
+                            [fileType]: {
+                                [fileType === "file_upload" ? "id" : "url"]: urlOrId,
                             },
                         };
                     }
@@ -391,6 +404,15 @@ export const page_props = {
                                 },
                             };
                         }
+                    } else if (file.file_upload && file.file_upload.id) {
+                        if (!validateValue(file.file_upload.id, "UUID")) {
+                            return null;
+                        } else {
+                            return {
+                                ...(file.name && validateValue(file.name, "string") !== "" && { name: validateValue(file.name, "string") }),
+                                file_upload: { id: file.file_upload.id },
+                            };
+                        }
                     } else if (file.url) {
                         if (!validateValue(file.url, "url")) {
                             return null;
@@ -402,6 +424,15 @@ export const page_props = {
                                 external: {
                                     url: validateValue(file.url, "url"),
                                 },
+                            };
+                        }
+                    } else if (file.id) {
+                        if (!validateValue(file.id, "UUID")) {
+                            return null;
+                        } else {
+                            return {
+                                ...(file.name && validateValue(file.name, "string") !== "" && { name: validateValue(file.name, "string") }),
+                                file_upload: { id: validateValue(file.id, "UUID") },
                             };
                         }
                     }
@@ -924,6 +955,15 @@ function validateValue(value, type) {
             return value;
         } else {
             console.warn(`Invalid URL. Returning null.`);
+            return null;
+        }
+    }
+
+    if (type === "UUID") {
+        if (isValidUUID(value)) {
+            return value;
+        } else {
+            console.warn(`Invalid UUID. Returning null.`);
             return null;
         }
     }

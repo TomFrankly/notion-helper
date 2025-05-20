@@ -28,6 +28,17 @@ export function isValidURL(string) {
 }
 
 /**
+ * Checks if a string is a valid UUID.
+ * 
+ * @param {string} string 
+ * @returns {boolean}
+ */
+export function isValidUUID(string) {
+    const regex = /^[0-9a-fA-F]{8}(-?[0-9a-fA-F]{4}){3}-?[0-9a-fA-F]{12}$/;
+    return regex.test(string);
+}
+
+/**
  * Checks if an image URL is both a valid URL and has a supported image file type.
  * 
  * @param {url} url - the URL to be checked 
@@ -59,6 +70,22 @@ export function validateVideoURL(url) {
         return (
             (formatRegex.test(url) || siteRegex.test(url)) && isValidURL(url)
         );
+    } catch (e) {
+        return false;
+    }
+}
+
+/**
+ * Checks if a audio URL is both a valid URL and will be accepted by the API, based on a list of supported file extensions.
+ * 
+ * @param {url} url - the URL to be checked 
+ * @returns {boolean}
+ */
+export function validateAudioURL(url) {
+    try {
+        const supportedFormats = CONSTANTS.AUDIO_SUPPORT.FORMATS.join("|");
+        const formatRegex = new RegExp(`\\.(${supportedFormats})$`, 'i');
+        return formatRegex.test(url) && isValidURL(url);
     } catch (e) {
         return false;
     }
