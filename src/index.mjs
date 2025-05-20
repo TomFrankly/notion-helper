@@ -1,5 +1,6 @@
 import { buildRichTextObj } from "./rich-text.mjs";
 import {
+    audio,
     block,
     makeParagraphBlocks,
     bookmark,
@@ -32,7 +33,7 @@ import { setIcon } from "./emoji-and-files.mjs";
 import { page_meta, page_props, parentDb, parentPage, pageId, blockId, propertyId, cover, icon, title, richText, checkbox, date, email, files, multiSelect, number, people, phoneNumber, relation, select, status, url } from "./page-meta.mjs";
 import { quickPages, createNotion } from "./pages.mjs";
 import { request, createPage, appendBlocks } from "./requests.mjs";
-import { getDepth, getLongestArray, getTotalCount } from "./utils.mjs";
+import { getDepth, getLongestArray, getTotalCount, getPayloadSize } from "./utils.mjs";
 
 export {
     buildRichTextObj,
@@ -67,6 +68,7 @@ export {
     select,
     status,
     url,
+    audio,
     bookmark,
     bulletedListItem,
     bullet,
@@ -95,6 +97,7 @@ export {
     getDepth,
     getLongestArray,
     getTotalCount,
+    getPayloadSize,
 }
 
 const NotionHelper = {
@@ -130,6 +133,7 @@ const NotionHelper = {
     select,
     status,
     url,
+    audio,
     bookmark,
     bulletedListItem,
     bullet,
@@ -152,7 +156,11 @@ const NotionHelper = {
     tableOfContents,
     toDo,
     toggle,
-    video
+    video,
+    getDepth,
+    getLongestArray,
+    getTotalCount,
+    getPayloadSize,
 }
 
 export default NotionHelper
