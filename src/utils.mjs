@@ -50,7 +50,6 @@ export function validateImageURL(url) {
         const formatRegex = new RegExp(`\\.(${supportedFormats})$`, 'i');
         return formatRegex.test(url) && isValidURL(url);
     } catch (e) {
-        console.error(`${url} is not a valid image URL.`)
         return false;
     }
 }

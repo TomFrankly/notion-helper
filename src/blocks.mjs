@@ -84,6 +84,10 @@ export const block = {
 
             const audioType = isFileUpload ? "file_upload" : isExternal ? "external" : "file";
 
+            if (!isValidAudio) {
+                console.warn(`${urlOrId} is not a valid audio URL or file upload ID.`)
+            }
+
             return isValidAudio
                 ? {
                       type: "audio",
@@ -472,6 +476,7 @@ export const block = {
                                 blocks.push(paragraph);
                             } else if (
                                 typeof singleBlock === "object" &&
+                                singleBlock !== null &&
                                 !singleBlock.hasOwnProperty("column")
                             ) {
                                 blocks.push(singleBlock);
@@ -597,6 +602,7 @@ export const block = {
                         blocks.push(paragraph);
                     } else if (
                         typeof singleBlock === "object" &&
+                        singleBlock !== null &&
                         !singleBlock.hasOwnProperty("column")
                     ) {
                         blocks.push(singleBlock);
@@ -738,6 +744,10 @@ export const block = {
             const isExternal = isValidURL(urlOrId);
 
             const fileType = isFileUpload ? "file_upload" : isExternal ? "external" : "file";
+
+            if (!isValid) {
+                console.warn(`${urlOrId} is not a valid file URL or file upload ID.`)
+            }
 
             return isValid
                 ? {
@@ -1007,6 +1017,10 @@ export const block = {
 
             const imageType = isFileUpload ? "file_upload" : isExternal ? "external" : "file";
 
+            if (!isValidImage) {
+                console.warn(`${urlOrId} is not a valid image URL or file upload ID.`)
+            }
+
             return isValidImage
                 ? {
                       type: "image",
@@ -1204,6 +1218,10 @@ export const block = {
             const isExternal = isValidURL(urlOrId);
 
             const pdfType = isFileUpload ? "file_upload" : isExternal ? "external" : "file";
+
+            if (!isValidPDF) {
+                console.warn(`${urlOrId} is not a valid PDF URL or file upload ID.`)
+            }
 
             return isValidPDF
                 ? {
@@ -1621,6 +1639,10 @@ export const block = {
             const isExternal = isValidURL(urlOrId);
 
             const videoType = isFileUpload ? "file_upload" : isExternal ? "external" : "file";
+
+            if (!isValidVideo) {
+                console.warn(`${urlOrId} is not a valid video URL or file upload ID.`)
+            }
 
             return isValidVideo
                 ? {
