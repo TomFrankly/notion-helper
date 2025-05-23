@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Notion Helper - Browser Example</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            line-height: 1.6;
+            background-color: #0d1117;
+            color: #e6edf3;
+            min-height: 100vh;
+        }
+        
+        h1 {
+            color: #f0f6fc;
+            text-align: center;
+            margin-bottom: 10px;
+        }
+        
+        body > p {
+            color: #8b949e;
+            text-align: center;
+            margin-bottom: 40px;
+        }
+        
+        .example {
+            background: #161b22;
+            border-radius: 12px;
+            margin: 30px 0;
+            overflow: hidden;
+            border: 1px solid #30363d;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+        }
+        
+        .example h3 {
+            margin: 0;
+            padding: 20px;
+            background: linear-gradient(135deg, #238636 0%, #2ea043 100%);
+            color: #ffffff;
+            font-size: 18px;
+            font-weight: 600;
+        }
+        
+        .example-content {
+            display: flex;
+            height: 400px;
+        }
+        
+        .code-column {
+            flex: 1;
+            padding: 20px;
+            background: #0d1117;
+            border-right: 1px solid #30363d;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .output-column {
+            flex: 1;
+            background: #161b22;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .code-block {
+            background: #0d1117;
+            color: #e6edf3;
+            padding: 20px;
+            border-radius: 8px;
+            border: 1px solid #21262d;
+            font-family: 'SFMono-Regular', 'Monaco', 'Menlo', 'Consolas', monospace;
+            font-size: 14px;
+            line-height: 1.5;
+            flex: 1;
+            overflow-y: auto;
+            white-space: pre-wrap;
+            margin-bottom: 15px;
+        }
+        
+        .output-area {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+            background: #0d1117;
+            border-radius: 8px;
+            margin: 20px;
+            border: 1px solid #21262d;
+        }
+        
+        .output {
+            font-family: 'SFMono-Regular', 'Monaco', 'Menlo', 'Consolas', monospace;
+            font-size: 13px;
+            line-height: 1.4;
+            white-space: pre-wrap;
+            color: #e6edf3;
+        }
+        
+        button {
+            background: linear-gradient(135deg, #238636 0%, #2ea043 100%);
+            color: #ffffff;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            transition: all 0.2s ease;
+            align-self: flex-start;
+            box-shadow: 0 2px 8px rgba(35, 134, 54, 0.3);
+        }
+        
+        button:hover {
+            background: linear-gradient(135deg, #2ea043 0%, #238636 100%);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(35, 134, 54, 0.4);
+        }
+        
+        button:active {
+            transform: translateY(0);
+        }
+        
+        /* Scrollbar styling for dark mode */
+        .code-block::-webkit-scrollbar,
+        .output-area::-webkit-scrollbar {
+            width: 8px;
+        }
+        
+        .code-block::-webkit-scrollbar-track,
+        .output-area::-webkit-scrollbar-track {
+            background: #161b22;
+            border-radius: 4px;
+        }
+        
+        .code-block::-webkit-scrollbar-thumb,
+        .output-area::-webkit-scrollbar-thumb {
+            background: #30363d;
+            border-radius: 4px;
+        }
+        
+        .code-block::-webkit-scrollbar-thumb:hover,
+        .output-area::-webkit-scrollbar-thumb:hover {
+            background: #484f58;
+        }
+        
+        /* Syntax highlighting colors for dark mode */
+        .keyword { color: #ff7ee3; }
+        .string { color: #a5d6ff; }
+        .function { color: #d2a8ff; }
+        .comment { color: #8b949e; }
+        .number { color: #79c0ff; }
+        .property { color: #ffa657; }
+    </style>
+</head>
+<body>
+    <h1>🧠 Notion Helper - Browser Example</h1>
+    
+    <p>This example demonstrates how to use the Notion Helper library in a browser environment. Each example shows the code you would write on the left, and the generated JSON output on the right.</p>
+
+    <div class="example">
+        <h3>Example 1: Create Rich Text Objects</h3>
+        <div class="example-content">
+            <div class="code-column">
+                <div class="code-block">import { buildRichTextObj } from 'notion-helper';
+
+// Create rich text with formatting
+const richText = buildRichTextObj("Hello, World!", {
+    bold: true,
+    color: "blue"
+});
+
+console.log(richText);</div>
+                <button onclick="createRichTextExample()">Run Example</button>
+            </div>
+            <div class="output-column">
+                <div class="output-area">
+                    <div id="richtext-output" class="output">Click "Run Example" to see the JSON output...</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="example">
+        <h3>Example 2: Create Block Objects</h3>
+        <div class="example-content">
+            <div class="code-column">
+                <div class="code-block">import { paragraph, heading1, bulletedListItem } from 'notion-helper';
+
+// Create an array of different block types
+const blocks = [
+    heading1("My Heading"),
+    paragraph("This is a paragraph with some text."),
+    bulletedListItem("First bullet point"),
+    bulletedListItem("Second bullet point")
+];
+
+console.log(blocks);</div>
+                <button onclick="createBlocksExample()">Run Example</button>
+            </div>
+            <div class="output-column">
+                <div class="output-area">
+                    <div id="blocks-output" class="output">Click "Run Example" to see the JSON output...</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="example">
+        <h3>Example 3: Create an Entire Page</h3>
+        <div class="example-content">
+            <div class="code-column">
+                <div class="code-block">import { createNotionBuilder } from 'notion-helper';
+
+// Create page object with properties and child blokcs
+const pageMeta = createNotionBuilder({
+    limitNesting: false,
+    limitChildren: true,
+    allowBlankParagraphs: true,
+}).title("Name", "Great American Novel Idea")
+    .richText("Description", "A tale about a cowboy going to space to meet Jabba the Hutt")
+    .status("Status", "To Do")
+    .date("Due Date", "2025-06-01")
+    .heading1("Novel Pitch")
+    .paragraph("The novel starts in an unlikely place: Des Moines, Iowa...")
+    .image(uploadId)
+    .build()
+
+console.log(pageMeta);</div>
+                <button onclick="createPageExample()">Run Example</button>
+            </div>
+            <div class="output-column">
+                <div class="output-area">
+                    <div id="pagemeta-output" class="output">Click "Run Example" to see the JSON output...</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Import the notion-helper library -->
+    <script type="module">
+        import NotionHelper from '../dist/browser/index.js';
+        
+        // Make NotionHelper available globally for the examples
+        window.NotionHelper = NotionHelper;
+        
+        console.log('Notion Helper loaded:', NotionHelper);
+    </script>
+
+    <script>
+        function createRichTextExample() {
+            const { buildRichTextObj } = window.NotionHelper;
+            
+            const richText = buildRichTextObj("Hello, World!", {
+                bold: true,
+                color: "blue"
+            });
+            
+            document.getElementById('richtext-output').textContent = 
+                JSON.stringify(richText, null, 2);
+        }
+
+        function createBlocksExample() {
+            const { paragraph, heading1, bulletedListItem } = window.NotionHelper;
+            
+            const blocks = [
+                heading1("My Heading"),
+                paragraph("This is a paragraph with some text."),
+                bulletedListItem("First bullet point"),
+                bulletedListItem("Second bullet point")
+            ];
+            
+            document.getElementById('blocks-output').textContent = 
+                JSON.stringify(blocks, null, 2);
+        }
+
+        function createPageExample() {
+            const { createNotionBuilder } = window.NotionHelper;
+
+            const uploadId = "123e4567-e89b-12d3-a456-426614174000"
+            
+            const page = createNotionBuilder({
+                limitNesting: false,
+                limitChildren: true,
+                allowBlankParagraphs: true,
+            }).title("Name", "Great American Novel Idea")
+                .richText("Description", "A tale about a cowboy going to space to meet Jabba the Hutt")
+                .status("Status", "To Do")
+                .date("Due Date", "2025-06-01")
+                .heading1("Novel Pitch")
+                .paragraph("The novel starts in an unlikely place: Des Moines, Iowa...")
+                .image(uploadId)
+                .build()
+            
+            document.getElementById('pagemeta-output').textContent = 
+                JSON.stringify(page.content, null, 2);
+        }
+
+    </script>
+</body>
+</html> 

@@ -174,34 +174,11 @@ export function quickPages({ parent, parent_type, pages, schema, childrenFn }) {
 }
 
 /**
- * A builder object for Notion content.
+ * A builder object for Notion content with fluent interface methods.
  * @typedef {Object} NotionBuilder
- */
-
-/**
- * Creates a fluent interface builder for constructing Notion objects, including pages, properties, and blocks. It adds an unhealthily-large spoonful of syntactic sugar onto the Notion API.
- *
- * Returns an object with two possible properties:
- *
- * 1. content (always returned) - can be a full page object, an array of blocks, or a properties object.
- *
- * 2. addititionalBlocks - array containing arrays of blocks passed to the builder function that go over Notion's limit for the number of blocks that can be in a children array. This allows you to add these to the returned page or block in further requests.
- *
- * This builder supports chaining methods so you can build pages or structures incrementally. It also supports block-nesting with the startParent() and endParent() methods.
- *
- * After adding all your blocks and properties, call build() to return the final object. It can be passed directly as the data object in Notion API requests.
- *
- * @namespace
- * @function createNotionBuilder
- * @param {boolean} [strict=false] If true, the builder will throw errors when passed invalid or null data. Otherwise, it will try to gracefully return, and strip out, null properties and blocks.
- * @param {number} [limitNesting=true] If true, limits the number of nested children block arrays to 2, which is the limit for a single Notion API request. Can be set to false if you're using the appendBlocks() or createPage() functions, which will recursively append nested children block arrays in subsequent API calls.
- * @param {boolean} [limitChildren=true] If true, the final content object's children array will have a maximum of 100 blocks, and the rest will be put into the additionalBlocks array in chunks of 100. If false, the content object will contain all child blocks.
- * @param {boolean} [allowBlankParagraphs=false] If true, calling .paragraph("") will result in an empty paragraph block being added to the block stack. Otherwise, .paragraph("") will return null, and will be stripped out of the children block array once you call .build()
- * @returns {NotionBuilder} A builder object with methods for constructing and managing Notion content. The builder includes methods to set page and property details, add various block types, manage nested structures, and ultimately build Notion-compatible objects.
- *
  * @example
  * const notionBuilder = createNotionBuilder();
- *
+ * 
  * // Build a new Notion page with various blocks
  * const result = notionBuilder
  *   .parentDb('database-id')
@@ -209,13 +186,128 @@ export function quickPages({ parent, parent_type, pages, schema, childrenFn }) {
  *   .paragraph('This is the first paragraph.')
  *   .heading1('Main Heading')
  *   .build();
+ */
+
+/**
+ * Creates a fluent interface builder for constructing Notion objects, including pages, properties, and blocks. 
+ * 
+ * **Fluent Interface Methods:**
+ * 
+ * The returned builder provides chainable methods organized into categories:
+ * 
+ * **Page Setup Methods:**
+ * - `parentDb(database_id)` - Sets parent database
+ * - `parentPage(page_id)` - Sets parent page  
+ * - `pageId(page_id)` - Adds page ID for updates
+ * - `blockId(block_id)` - Adds block ID for block operations
+ * - `propertyId(property_id)` - Adds property ID for property operations
+ * - `cover(url)` - Sets page cover image
+ * - `icon(url)` - Sets page icon
+ * 
+ * **Property Methods:**
+ * - `property(name, type, value)` - Adds custom property
+ * - `title(name, value)` - Adds title property
+ * - `richText(name, value)` - Adds rich text property
+ * - `checkbox(name, value)` - Adds checkbox property
+ * - `date(name, value)` - Adds date property
+ * - `email(name, value)` - Adds email property
+ * - `files(name, value)` - Adds files property
+ * - `multiSelect(name, value)` - Adds multi-select property
+ * - `number(name, value)` - Adds number property
+ * - `people(name, value)` - Adds people property
+ * - `phoneNumber(name, value)` - Adds phone number property
+ * - `relation(name, value)` - Adds relation property
+ * - `select(name, value)` - Adds select property
+ * - `status(name, value)` - Adds status property
+ * - `url(name, value)` - Adds URL property
+ * 
+ * **Block Methods:**
+ * - `paragraph(content, options, url)` - Adds paragraph block
+ * - `heading1(content, options, url)` - Adds H1 block
+ * - `heading2(content, options, url)` - Adds H2 block
+ * - `heading3(content, options, url)` - Adds H3 block
+ * - `bulletedListItem(content, options, url)` - Adds bulleted list item
+ * - `numberedListItem(content, options, url)` - Adds numbered list item
+ * - `toDo(content, checked, options, url)` - Adds to-do block
+ * - `callout(content, emoji, options, url)` - Adds callout block
+ * - `quote(content, options, url)` - Adds quote block
+ * - `code(content, language)` - Adds code block
+ * - `divider()` - Adds divider block
+ * - `image(url, caption)` - Adds image block
+ * - `video(url, caption)` - Adds video block
+ * - `audio(url, caption)` - Adds audio block
+ * - `file(url, caption)` - Adds file block
+ * - `pdf(url, caption)` - Adds PDF block
+ * - `bookmark(url, caption)` - Adds bookmark block
+ * - `embed(url, caption)` - Adds embed block
+ * - `table(tableArray)` - Adds table block
+ * - `tableRow(cellContents)` - Adds table row
+ * - `columnList(columnArray)` - Adds column list
+ * - `column(columnContent)` - Adds column
+ * - `toggle(content, children, options, url)` - Adds toggle block
+ * 
+ * **Structure Management:**
+ * - `startParent(parentBlock)` - Begins nested block structure
+ * - `endParent()` - Ends current nesting level
+ * - `build()` - Finalizes and returns the built object
+ * 
+ * **Return Object:**
+ * 
+ * Returns an object with two possible properties:
+ * - `content` (always returned) - can be a full page object, an array of blocks, or a properties object
+ * - `additionalBlocks` - array containing block chunks that exceed Notion's limits for subsequent requests
  *
- * // Access the built content and handle additional blocks if they exist
- * console.log(result.content);  // The main Notion page content
- * console.log(result.additionalBlocks);  // Any blocks that need separate requests due to size constraints
- *
- * // Create a page in Notion with the result (assumes you've installed and imported the Notion SDK and instantiated a client bound to a 'notion' variable)
- * const response = await notion.pages.create(result.content)
+ * @function createNotionBuilder
+ * @param {Object} [options] - Configuration options for the builder
+ * @param {boolean} [options.strict=false] If true, throws errors for invalid data. Otherwise gracefully handles nulls.
+ * @param {boolean} [options.limitNesting=true] If true, limits nested children to 2 levels (Notion API limit).
+ * @param {boolean} [options.limitChildren=true] If true, limits children arrays to 100 blocks, putting excess in additionalBlocks.
+ * @param {boolean} [options.allowBlankParagraphs=false] If true, allows empty paragraph blocks.
+ * @returns {NotionBuilder} A builder object with fluent interface methods for constructing Notion content.
+ * 
+ * @example
+ * // Basic page creation
+ * const page = createNotionBuilder()
+ *   .parentDb('database-id')
+ *   .title('Name', 'My Task')
+ *   .select('Status', 'In Progress')
+ *   .date('Due Date', '2024-12-01')
+ *   .paragraph('This is a task description.')
+ *   .toDo('Complete the first step', false)
+ *   .toDo('Review with team', false)
+ *   .build();
+ * 
+ * // Complex nested structure
+ * const complexPage = createNotionBuilder()
+ *   .parentDb('database-id')
+ *   .title('Project Name', 'Website Redesign')
+ *   .heading1('Project Overview')
+ *   .paragraph('This project involves redesigning our main website.')
+ *   .heading2('Phase 1: Research')
+ *   .startParent(toggle('Research Tasks', []))
+ *     .toDo('Conduct user interviews', false)
+ *     .toDo('Analyze competitor websites', false)
+ *   .endParent()
+ *   .heading2('Phase 2: Design')
+ *   .callout('Important: Get stakeholder approval before development', '⚠️')
+ *   .build();
+ * 
+ * // Handle large content with additionalBlocks
+ * const result = page.content;
+ * const extraBlocks = page.additionalBlocks;
+ * 
+ * // Create page first, then append additional blocks if needed
+ * const notion = new Client({ auth: process.env.NOTION_TOKEN });
+ * const newPage = await notion.pages.create(result);
+ * 
+ * if (extraBlocks && extraBlocks.length > 0) {
+ *   for (const blockChunk of extraBlocks) {
+ *     await notion.blocks.children.append({
+ *       block_id: newPage.id,
+ *       children: blockChunk
+ *     });
+ *   }
+ * }
  */
 export function createNotionBuilder({
     strict = false,

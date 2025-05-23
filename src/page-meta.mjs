@@ -344,12 +344,10 @@ export const page_props = {
         setProp: (files, fileName) => {
             const processFile = (file) => {
                 if (typeof file === "string") {
-                    const isValidFile = validateValue(file, "url") || validateValue(file, "UUID");
                     const isFileUpload = validateValue(file, "UUID");
                     const isExternal = validateValue(file, "url");
-
-                    const fileType = isFileUpload ? "file_upload" : isExternal ? "external" : "file";
-                    const needsName = fileType === "external" || (fileType === "file" && fileName);
+                    const isValidFile = isFileUpload || isExternal;
+                    const needsName = isExternal || (isFileUpload && fileName);
                     
                     if (!isValidFile) {
                         return null;
@@ -358,19 +356,17 @@ export const page_props = {
                             ...(needsName && { name: fileName && fileName !== ""
                                 ? validateValue(fileName, "string")
                                 : validateValue(file, "string") }),
-                            [fileType]: {
-                                [fileType === "file_upload" ? "id" : "url"]: file,
+                            [isExternal ? "external" : "file_upload"]: {
+                                [isExternal ? "url" : "id"]: file,
                             },
                         };
                     }
                 } else if (Array.isArray(file) && file.length === 2) {
                     const [urlOrId, name] = file;
-                    const isValidFile = validateValue(urlOrId, "url") || validateValue(urlOrId, "UUID");
                     const isFileUpload = validateValue(urlOrId, "UUID");
                     const isExternal = validateValue(urlOrId, "url");
-
-                    const fileType = isFileUpload ? "file_upload" : isExternal ? "external" : "file";
-                    const needsName = fileType === "external" || (fileType === "file" && name);
+                    const isValidFile = isFileUpload || isExternal;
+                    const needsName = isExternal || (isFileUpload && name);
 
                     if (!isValidFile) {
                         return null;
@@ -379,8 +375,8 @@ export const page_props = {
                             ...(needsName && { name: validateValue(name, "string")
                                 ? validateValue(name, "string")
                                 : validateValue(urlOrId, "string") }),
-                            [fileType]: {
-                                [fileType === "file_upload" ? "id" : "url"]: urlOrId,
+                            [isExternal ? "external" : "file_upload"]: {
+                                [isExternal ? "url" : "id"]: urlOrId,
                             },
                         };
                     }

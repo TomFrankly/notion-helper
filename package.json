@@ -1,12 +1,39 @@
 {
   "name": "notion-helper",
   "description": "A library of functions for working more easily with the Notion API",
-  "version": "1.3.19",
+  "version": "1.3.20",
   "type": "module",
   "main": "src/index.mjs",
+  "browser": "dist/browser/index.js",
   "types": "dist/index.d.mts",
-  "files": ["src", "dist"],
+  "exports": {
+    ".": {
+      "browser": "./dist/browser/index.js",
+      "node": "./src/index.mjs",
+      "import": "./src/index.mjs",
+      "types": "./dist/index.d.mts"
+    }
+  },
+  "files": [
+    "src",
+    "dist",
+    "README.md",
+    "license.md"
+  ],
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "peerDependencies": {
+    "@notionhq/client": "^2.0.0"
+  },
+  "peerDependenciesMeta": {
+    "@notionhq/client": {
+      "optional": true
+    }
+  },
   "devDependencies": {
+    "documentation": "^14.0.3",
+    "esbuild": "^0.25.4",
     "typescript": "^5.6.3"
   },
   "author": "Thomas Frank <thomas@thomasjfrank.com> (https://thomasjfrank.com)",
@@ -15,15 +42,32 @@
     "notion",
     "notion api",
     "notionapi",
-    "notion-api"
+    "notion-api",
+    "browser",
+    "frontend"
   ],
   "repository": {
     "type": "git",
     "url": "https://github.com/TomFrankly/notion-helper"
   },
   "scripts": {
-    "docs": "documentation build src/*.mjs -f html --github -o docs",
-    "build": "tsc"
+    "docs": "documentation build src/*.mjs -f html --github -o docs --config documentation.yml",
+    "docs:build": "npm run docs",
+    "docs:serve": "npx http-server docs -p 8080 -o",
+    "build": "npm run build:types && npm run build:browser",
+    "build:types": "tsc",
+    "build:browser": "esbuild src/index.mjs --bundle --format=esm --outfile=dist/browser/index.js --external:@notionhq/client",
+    "dev": "esbuild src/index.mjs --bundle --format=esm --outfile=dist/browser/index.js --external:@notionhq/client --watch",
+    "clean": "rm -rf dist docs",
+    "prepublishOnly": "npm run clean && npm run build && npm run docs",
+    "test": "echo \"Error: no test specified\" && exit 1"
   },
-  "homepage": "https://github.com/TomFrankly/notion-helper"
+  "homepage": "https://github.com/TomFrankly/notion-helper",
+  "bugs": {
+    "url": "https://github.com/TomFrankly/notion-helper/issues"
+  },
+  "funding": {
+    "type": "individual",
+    "url": "https://thomasjfrank.com"
+  }
 }
