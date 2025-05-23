@@ -38,6 +38,9 @@ jobs:
       - name: Add .nojekyll file
         run: touch docs/.nojekyll
 
+      - name: Verify .nojekyll file
+        run: ls -la docs/.nojekyll
+
       - name: Setup Pages
         uses: actions/configure-pages@v4
 
