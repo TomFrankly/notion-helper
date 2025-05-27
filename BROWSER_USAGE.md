@@ -133,10 +133,7 @@ All the same functions available in the Node.js version work in the browser:
 - `status()`, `url()`
 
 ### Utilities
-- `isSingleEmoji()`, `isValidURL()`, `validateImageURL()`
-- `validateVideoURL()`, `validateAudioURL()`, `validatePDFURL()`
-- `enforceStringLength()`, `validateDate()`
-- `getDepth()`, `getTotalCount()`, `getLongestArray()`
+- `getDepth()`, `getTotalCount()`, `getLongestArray()`, `getPayloadSize()`
 
 ### API Helpers
 - `createPage()`, `appendBlocks()` (require custom API function)
@@ -156,7 +153,9 @@ This includes:
 
 ## Example Projects
 
-Check out the `examples/browser-example.html` file for a complete working example that demonstrates all the main features.
+Check out our **[Interactive Browser Example](https://tomfrankly.github.io/notion-helper/examples/browser-example.html)** for a complete working example that demonstrates all the main features with live code execution!
+
+You can also find the source code in the `examples/browser-example.html` file in this repository.
 
 ## Limitations
 

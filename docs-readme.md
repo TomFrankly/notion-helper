@@ -71,6 +71,10 @@ const response = await fetch('/api/create-notion-page', {
 
 **Important**: Browsers can't directly call the Notion API due to CORS restrictions. You'll need a backend proxy or serverless function to handle the actual API calls.
 
+### 🎮 Try the Interactive Example
+
+Want to see it in action? Check out our **[Interactive Browser Example](./examples/browser-example.html)** that lets you run code and see the JSON output in real-time!
+
 ## Need Help?
 
 - Check out the [full Browser Usage Guide](https://github.com/TomFrankly/notion-helper/blob/main/BROWSER_USAGE.md) on GitHub

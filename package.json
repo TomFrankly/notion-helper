@@ -51,7 +51,7 @@
     "url": "https://github.com/TomFrankly/notion-helper"
   },
   "scripts": {
-    "docs": "documentation build src/*.mjs -f html --github -o docs --config documentation.yml && touch docs/.nojekyll",
+    "docs": "documentation build src/*.mjs -f html --github -o docs --config documentation.yml && touch docs/.nojekyll && cp -r examples docs/ && cp -r dist docs/",
     "docs:build": "npm run docs",
     "docs:serve": "npx http-server docs -p 8080 -o",
     "build": "npm run build:types && npm run build:browser",

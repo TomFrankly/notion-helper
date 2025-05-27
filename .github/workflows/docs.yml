@@ -38,6 +38,11 @@ jobs:
       - name: Add .nojekyll file
         run: touch docs/.nojekyll
 
+      - name: Copy examples and dist to docs
+        run: |
+          cp -r examples docs/ || echo "Examples folder not found, skipping..."
+          cp -r dist docs/ || echo "Dist folder not found, skipping..."
+
       - name: Verify .nojekyll file
         run: ls -la docs/.nojekyll
 
