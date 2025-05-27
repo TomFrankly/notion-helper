@@ -1,37 +1,38 @@
-# Notion Helper Documentation
+# notion-helper Documentation
 
-Welcome to the Notion Helper documentation! This library provides a heaping spoonful of syntactic sugar for the Notion API.
+Welcome to the notion-helper documentation. This library provides a heaping spoonful of syntactic sugar for the Notion API.
+
+It primarily gives you a fluent interface for quickly building JSON to create Notion blocks, pages, and property values.
+
+You'll also find functions that can intelligently make API calls for creating new pages and appending blocks. Pass these a valid client object or API call function, and they'll handle the comlicated process of splitting blocks into chunks to deal with the Notion API's limits.
 
 ## Quick Start
 
-```javascript
-import NotionHelper from 'notion-helper';
+Create a page:
 
-// Simple page creation
-const page = NotionHelper.createNotionBuilder()
-  .parentDb('your-database-id')
-  .title('Name', 'My New Page')
-  .paragraph('Hello, Notion!')
-  .build();
+```javascript
+import { createNotionBuilder, createPage } from 'notion-helper';
+import { Client } from '@notionhq/client';
+
+const page = createNotion()
+  .parentDb("your-database-id")
+  .title("Name", "Charmander")
+  .icon("https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/4.png")
+  .richText("Category", "Lizard Pokémon")
+  .quote("Obviously prefers hot places. When it rains, steam is said to spout from the tip of its tail.")
+  .build()
+
+const client = new Client({
+  auth: process.env.NOTION_API_KEY
+})
+
+const response = await createPage({
+  data: page.content,
+  client: client,
+})
 ```
 
-## What You'll Find Here
-
-- **Quick Functions** - Simple utilities for common tasks like `quickPages()`, `makeParagraphBlocks()`, and `buildRichTextObj()`
-- **Builder Interface** - Powerful fluent interface via `createNotionBuilder()` for complex page construction
-- **API Requests** - Functions for making Notion API calls with automatic pagination and error handling
-- **Page Metadata** - Property and metadata creation functions for all Notion property types
-- **Block Creation** - Support for all available Notion block types (paragraphs, headings, lists, media, etc.)
-- **Utilities** - Helper functions for validation, string handling, and API limits
-
-## Key Features
-
-- ✨ **Fluent Interface** - Chain methods to build complex pages easily
-- 🧱 **All Block Types** - Support for every Notion block type
-- 📱 **Browser Compatible** - Works in both Node.js and browser environments
-- 🔗 **Nested Structures** - Handle complex nested content automatically
-- 📦 **Size Aware** - Automatically handles Notion's API limits
-- 🔧 **TypeScript Ready** - Full type definitions included
+See the [notion-helper](https://notion-helper.framer.website/) website for more examples.
 
 ## Browser Usage
 
@@ -74,11 +75,5 @@ const response = await fetch('/api/create-notion-page', {
 ### 🎮 Try the Interactive Example
 
 Want to see it in action? Check out our **[Interactive Browser Example](./examples/browser-example.html)** that lets you run code and see the JSON output in real-time!
-
-## Need Help?
-
-- Check out the [full Browser Usage Guide](https://github.com/TomFrankly/notion-helper/blob/main/BROWSER_USAGE.md) on GitHub
-- See the [GitHub repository](https://github.com/TomFrankly/notion-helper) for more examples
-- Review the API reference below for detailed method documentation
 
 --- 
