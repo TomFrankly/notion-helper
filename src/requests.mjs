@@ -443,7 +443,6 @@ export const request = {
                                         if (
                                             blockMaxDepth <= maxDepthLimit &&
                                             blockMaxChildArrayLength <= maxChildArrayLimit &&
-                                            blockPayloadSize <= MAX_PAYLOAD_SIZE &&
                                             blocksUsed + blockTotalChildBlockCount < blockLimit - 100 // Leave buffer for required children of table blocks
                                         ) {
                                             blocksUsed += blockTotalChildBlockCount
