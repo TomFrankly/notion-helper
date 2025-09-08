@@ -71,7 +71,7 @@ export const request = {
          * @function
          * @param {Object} options - The options for creating a page.
          * @param {Object} options.data - The data for creating the page.
-         * @param {Object} options.data.parent - The parent of the page (must include either database_id or page_id).
+         * @param {Object} options.data.parent - The parent of the page (must include data_source_id, page_id, or database_id (database_id is deprecated and will not work in databases with more than one data source)).
          * @param {Object} [options.data.properties] - The properties of the page.
          * @param {Object} [options.data.icon] - The icon of the page.
          * @param {Object} [options.data.cover] - The cover of the page.
@@ -86,7 +86,7 @@ export const request = {
          * // Using with Notion SDK client
          * const notion = new Client({ auth: NOTION_TOKEN });
          * const page = createNotion()
-         *      .parentDb("your-database-id")
+         *      .parentDataSource("your-data-source-id")
          *      .title("Name", "Charmander")
          *      .icon("https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/4.png")
          *      .richText("Category", "Lizard Pokémon")
@@ -102,7 +102,7 @@ export const request = {
          * import ky from 'ky';
          *
          * const NOTION_TOKEN = 'your-notion-token';
-         * const NOTION_VERSION = '2022-06-28';
+         * const NOTION_VERSION = '2025-09-03';
          *
          * const customApiCall = async (data) => {
          *   return await ky.post('https://api.notion.com/v1/pages', {
@@ -115,7 +115,7 @@ export const request = {
          * };
          *
          * const page = createNotion()
-         *      .parentDb("your-database-id")
+         *      .parentDataSource("your-data-source-id")
          *      .title("Name", "Squirtle")
          *      .icon("https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/7.png")
          *      .richText("Category", "Tiny Turtle Pokémon")
@@ -314,7 +314,7 @@ export const request = {
              *       json: { children },
              *       headers: {
              *         'Authorization': `Bearer ${NOTION_TOKEN}`,
-             *         'Notion-Version': '2022-06-28',
+             *         'Notion-Version': '2025-09-03',
              *       },
              *     }
              *   ).json();
@@ -615,7 +615,7 @@ export const request = {
  * @function
  * @param {Object} options - The options for creating a page.
  * @param {Object} options.data - The data for creating the page.
- * @param {Object} options.data.parent - The parent of the page (must include either database_id or page_id).
+ * @param {Object} options.data.parent - The parent of the page (must include data_source_id, page_id, or database_id (database_id is deprecated and will not work in databases with more than one data source)).
  * @param {Object} [options.data.properties] - The properties of the page.
  * @param {Object} [options.data.icon] - The icon of the page.
  * @param {Object} [options.data.cover] - The cover of the page.
@@ -630,7 +630,7 @@ export const request = {
  * // Using with Notion SDK client
  * const notion = new Client({ auth: NOTION_TOKEN });
  * const page = createNotion()
- *      .parentDb("your-database-id")
+ *      .parentDataSource("your-data-source-id")
  *      .title("Name", "Charmander")
  *      .icon("https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/4.png")
  *      .richText("Category", "Lizard Pokémon")
@@ -693,7 +693,7 @@ export function createPage(options) {
  *       json: { children },
  *       headers: {
  *         'Authorization': `Bearer ${NOTION_TOKEN}`,
- *         'Notion-Version': '2022-06-28',
+ *         'Notion-Version': '2025-09-03',
  *       },
  *     }
  *   ).json();

@@ -19,17 +19,35 @@ export const page_meta = {
     parent: {
         type: "string",
         /**
-         * Creates a parent object with a database_id or page_id.
+         * Creates a parent object with a data_source_id, page_id, or database_id.
          * @function
          * @param {Object} params - Parameters for creating parent metadata.
          * @param {string} params.id - The ID of the parent.
-         * @param {string} params.type - The type of the parent ("database_id" or "page_id").
+         * @param {string} params.type - The type of the parent ("data_source_id", "page_id", or "database_id" (database_id is deprecated)).
          * @returns {Object} A parent metadata object.
          */
-        createMeta: ({ id, type }) => ({
-            type: type,
-            [type]: id,
-        }),
+        createMeta: ({ id, type }) => {
+            if (type === "database_id") {
+                console.warn("Creating a page with a parent database_id is deprecated, and will not work in databases with more than one data source. Use parentDataSource() with a data_source_id instead.");
+            }
+
+            // Handle common mistakes in the 'type' parameter
+            if (typeof type === "string") {
+                const normalized = type.toLowerCase().replace(/[-_]/g, "");
+                if (["page", "pageid"].includes(normalized)) {
+                    type = "page_id";
+                } else if (["database", "databaseid"].includes(normalized)) {
+                    type = "database_id";
+                } else if (["datasource", "datasourceid", "datasource_id", "data_source", "data_sourceid", "data_source_id"].includes(normalized)) {
+                    type = "data_source_id";
+                }
+            }
+
+            return {
+                type: type,
+                [type]: id,
+            };
+        },
     },
 
     /**
@@ -128,16 +146,49 @@ export const page_meta = {
  */
 
 /**
- * Creates a parent database object.
+ * Creates a parent database object. Deprecated in September 2025. Will not work in databases with more than one data source.
+ * @memberof PageShorthand
+ * @param {string} database_id - The ID of the parent database.
+ * @returns {Object} A parent database object.
+ */
+export function parentDatabase(database_id) {
+    return page_meta.parent.createMeta({
+        id: database_id,
+        type: "database_id",
+    });
+}
+
+/**
+ * Alias for parentDatabase(). Creates a parent database object. Deprecated in September 2025. Will not work in databases with more than one data source.
  * @memberof PageShorthand
  * @param {string} database_id - The ID of the parent database.
  * @returns {Object} A parent database object.
  */
 export function parentDb(database_id) {
-    return page_meta.parent.createMeta({
-        id: database_id,
-        type: "database_id",
+    return parentDatabase(database_id);
+}
+
+/**
+ * Creates a parent data source object.
+ * @memberof PageShorthand
+ * @param {string} data_source_id - The ID of the parent data source.
+ * @returns {Object} A parent data source object.
+ */
+export function parentDataSource(data_source_id) {
+    return page_meta.parent.createMeta({ 
+        id: data_source_id, 
+        type: "data_source_id" 
     });
+}
+
+/**
+ * Alias for parentDataSource(). Creates a parent data source object.
+ * @memberof PageShorthand
+ * @param {string} data_source_id - The ID of the parent data source.
+ * @returns {Object} A parent data source object.
+ */
+export function parentDs(data_source_id) {
+    return parentDataSource(data_source_id);
 }
 
 /**

@@ -13,13 +13,13 @@ import { enforceStringLength } from "./utils.mjs";
  *
  * @param {Object} options
  * @param {string} parent - The ID of the parent page or database.
- * @param {string} parent_type - "page_id" or "database_id".
+ * @param {string} parent_type - "page_id", "data_source_id", or "database_id". (database_id is deprecated and will not work in databases with more than one data source.)
  * @param {(Array<Object>|Object)} pages - an array of simple objects, each of which will be turned into a valid page object. Each can have property types that match to valid Notion page properties, as well as a "cover", "icon", and "children" property. The "children" prop's value should be either a string or an array. You can also pass a single object, but the function will still return an array.
  * @param {Object} schema - an object that maps the schema of the pages objects to property names and types in the parent. Saves you from needing to specify the property name and type from the target Notion database for every entry in your pages object. For each property in your pages object that should map to a Notion database property, specify the key as the property name in the pages object and set the value as an array with the Notion property name as the first element and the property type as the second. Non-valid property types will be filtered out. Optionall, you can specify custom keys for the icon (["Icon", "icon"]), cover (["Cover", "cover"]), and children array (["Children", "children"]).
  * @param {function} childrenFn - a callback you can specify that will run on any array elements present in a "children" property of any object in the pages array. If that "children" property contains a single string, it'll run on that as well. If omitted, any "children" values will be converted to Paragraph blocks by default.
  *
  * @example
- * const database = "abcdefghijklmnopqrstuvwxyz"
+ * const dataSource = "abcdefghijklmnopqrstuvwxyz"
  *
  * const tasks = [ {
  *   icon: "😛",
@@ -35,8 +35,8 @@ import { enforceStringLength } from "./utils.mjs";
  * }
  *
  * const pageObjects = quickPages({
- *      parent: database,
- *      parent_type: "database_id",
+ *      parent: dataSource,
+ *      parent_type: "data_source_id",
  *      pages: tasks,
  *      schema: schema,
  *      childrenFn: (value) => NotionHelper.makeParagraphs(value)
@@ -181,7 +181,7 @@ export function quickPages({ parent, parent_type, pages, schema, childrenFn }) {
  * 
  * // Build a new Notion page with various blocks
  * const result = notionBuilder
- *   .parentDb('database-id')
+ *   .parentDataSource('data-source-id')
  *   .title('Page Title', 'Hello World')
  *   .paragraph('This is the first paragraph.')
  *   .heading1('Main Heading')
@@ -196,8 +196,11 @@ export function quickPages({ parent, parent_type, pages, schema, childrenFn }) {
  * The returned builder provides chainable methods organized into categories:
  * 
  * **Page Setup Methods:**
- * - `parentDb(database_id)` - Sets parent database
- * - `parentPage(page_id)` - Sets parent page  
+ * - `parentDataSource(data_source_id)` - Sets parent data source
+ * - `parentDs(data_source_id)` - Alias for parentDataSource()
+ * - `parentPage(page_id)` - Sets parent page
+ * - `parentDatabase(database_id)` - Sets parent database (deprecated, will not work in databases with more than one data source)
+ * - `parentDb(database_id)` - Alias for parentDatabase() (deprecated, will not work in databases with more than one data source)
  * - `pageId(page_id)` - Adds page ID for updates
  * - `blockId(block_id)` - Adds block ID for block operations
  * - `propertyId(property_id)` - Adds property ID for property operations
@@ -268,7 +271,7 @@ export function quickPages({ parent, parent_type, pages, schema, childrenFn }) {
  * @example
  * // Basic page creation
  * const page = createNotionBuilder()
- *   .parentDb('database-id')
+ *   .parentDataSource('data-source-id')
  *   .title('Name', 'My Task')
  *   .select('Status', 'In Progress')
  *   .date('Due Date', '2024-12-01')
@@ -279,7 +282,7 @@ export function quickPages({ parent, parent_type, pages, schema, childrenFn }) {
  * 
  * // Complex nested structure
  * const complexPage = createNotionBuilder()
- *   .parentDb('database-id')
+ *   .parentDataSource('data-source-id')
  *   .title('Project Name', 'Website Redesign')
  *   .heading1('Project Overview')
  *   .paragraph('This project involves redesigning our main website.')
@@ -389,17 +392,49 @@ export function createNotionBuilder({
     const builder = {
         // Page Methods
         /**
-         * Sets the parent database for the page.
+         * Sets the parent database for the page. Deprecated in September 2025. Will not work in databases with more than one data source.
          * @param {string} database_id - The ID of the parent database.
          * @returns {this} The builder instance for method chaining.
          */
-        parentDb(database_id) {
+        parentDatabase(database_id) {
             data.parent = page_meta.parent.createMeta({
                 id: database_id,
                 type: "database_id",
             });
             hasPageParent = true;
             return this;
+        },
+
+        /**
+         * Alias for parentDatabase(). Sets the parent database for the page. Deprecated in September 2025. Will not work in databases with more than one data source.
+         * @param {string} database_id - The ID of the parent database.
+         * @returns {this} The builder instance for method chaining.
+         */
+        parentDb(database_id) {
+            return this.parentDatabase(database_id);
+        },
+
+        /**
+         * Sets the parent data source for the page.
+         * @param {string} data_source_id - The ID of the parent data source.
+         * @returns {this} The builder instance for method chaining.
+         */
+        parentDataSource(data_source_id) {
+            data.parent = page_meta.parent.createMeta({ 
+                id: data_source_id, 
+                type: "data_source_id" 
+            });
+            hasPageParent = true;
+            return this;
+        },
+
+        /**
+         * Alias for parentDataSource(). Sets the parent data source for the page.
+         * @param {string} data_source_id - The ID of the parent data source.
+         * @returns {this} The builder instance for method chaining.
+         */
+        parentDs(data_source_id) {
+            return this.parentDataSource(data_source_id);
         },
 
         /**

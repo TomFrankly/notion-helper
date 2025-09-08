@@ -15,7 +15,7 @@ import { createNotionBuilder, createPage } from 'notion-helper';
 import { Client } from '@notionhq/client';
 
 const page = createNotion()
-  .parentDb("your-database-id")
+  .parentDataSource("your-data-source-id")
   .title("Name", "Charmander")
   .icon("https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/4.png")
   .richText("Category", "Lizard Pokémon")
@@ -45,7 +45,7 @@ import { Client } from '@notionhq/client';
 
 const notion = new Client({ auth: process.env.NOTION_TOKEN });
 const page = NotionHelper.createNotionBuilder()
-  .parentDb('database-id')
+  .parentDataSource('data-source-id')
   .title('Name', 'My Page')
   .build();
 
@@ -58,7 +58,7 @@ import NotionHelper from 'notion-helper';
 
 // Create your page structure
 const page = NotionHelper.createNotionBuilder()
-  .parentDb('database-id')
+  .parentDataSource('data-source-id')
   .title('Name', 'My Page')
   .paragraph('Created in the browser!')
   .build();

@@ -4,6 +4,8 @@ A heaping spoonful of syntactic sugar for the Notion API.
 
 This library is mainly built to help you create pages and blocks without writing so many nested objects and arrays by hand.
 
+**This library has been fully updated to support databases with multiple data sources. See the [2025-09-03 API version update details](https://developers.notion.com/docs/upgrade-guide-2025-09-03) to learn more about this change.**
+
 All functions and methods have [JSDoc](https://jsdoc.app/) markup to support IntelliSense.
 
 Check out the [library's website](https://notion-helper.framer.website/) for additional examples.
@@ -32,7 +34,7 @@ You can use notion-helper directly in the browser via CDN:
   
   // Use NotionHelper functions
   const page = NotionHelper.createNotionBuilder()
-    .parentDb('database-id')
+    .parentDataSource('data-source-id')
     .title('Name', 'My Page')
     .build();
 </script>
@@ -132,12 +134,12 @@ const album = {
     ]
 }
 
-// The target database
-const database_id = "41eb98ef0a1ec4a6c91tq2thrb2930a";
+// The target data source
+const data_source_id = "2640da6f-544e-8098-9fea-000ba6232c0a"; // Works with or without the dashes
 
 // Create a builder instance and chain methods to add the page details
 const builder = createNotionBuilder()
-  .parentDb(database_id)
+  .parentDataSource(data_source_id)
   .title("Name", album.name)
   .richText("Artist", album.artist)
   .date("Released", album.release_date)
@@ -147,7 +149,7 @@ const builder = createNotionBuilder()
   .image(album.cover)
   .build() // Call build() at the end of the chain
 
-// We called parentDb(), so builder.content is a page object we can use
+// We called parentDataSource(), so builder.content is a page object we can use
 // to create a new page in our target database
 const response = await notion.pages.create(builder.content)
 ```
@@ -260,10 +262,10 @@ const album = {
 };
 
 // The target database
-const database_id = "41eb98ef0a1ec4a6c91tq2thrb2930a";
+const data_source_id = "2640da6f-544e-8098-9fea-000ba6232c0a"; // Works with or without the dashes
 
 const builder = createNotionBuilder()
-    .parentDb(database_id)
+    .parentDataSource(data_source_id)
     .title("Name", album.name)
     .richText("Artist", album.artist)
     .date("Released", album.release_date)
@@ -340,13 +342,13 @@ const heading1 = NotionHelper.block.heading_1.createBlock({
 
 The `page_meta` object lets you quickly set the parent, icon, and cover for a page. Pages can be standalone or within a database.
 
-The `parent` property's `createMeta()` method takes an object containing the parent page ID and type, while the `icon` and `cover` properties require only a string representing an externally-hosted image file (or single emoji 🤠 in the case of `icon`).
+The `parent` property's `createMeta()` method takes an object containing the parent ID and type, while the `icon` and `cover` properties require only a string representing an externally-hosted image file (or single emoji 🤠 in the case of `icon`).
 
 ```js
 const page = {
   parent: NotionHelper.page_meta.parent.createMeta({
     id: parentID,
-    type: "database",
+    type: "data_source_id",
   }),
   icon: NotionHelper.page_meta.icon.createMeta("🎃"),
   cover: NotionHelper.page_meta.cover.createMeta(
