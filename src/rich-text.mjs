@@ -38,6 +38,10 @@ import { enforceStringLength, isValidURL } from "./utils.mjs";
  * 
  * // Mention
  * buildRichTextObj({ type: "user", user: { id: "user_id" } }, { type: "mention" })
+ * buildRichTextObj({ type: "date", date: { start: "2025-01-01" } }, { type: "mention" })
+ * buildRichTextObj({ type: "database", database_id: "database_id" }, { type: "mention" })
+ * buildRichTextObj({ type: "page", page_id: "page_id" }, { type: "mention" })
+ * buildRichTextObj({ type: "link_preview", link_preview: { url: "https://www.youtube.com/watch?v=dQw4w9WgXcQ" } }, { type: "mention" })
  */
 export function buildRichTextObj(input, options = {}) {
     // Handle backwards compatibility
@@ -74,6 +78,9 @@ export function buildRichTextObj(input, options = {}) {
                         equation: {
                             expression: input,
                         },
+                        annotations: {
+                            ...annotations,
+                        },
                     },
                 ];
         }
@@ -97,6 +104,7 @@ export function buildRichTextObj(input, options = {}) {
                             annotations: {
                                 ...annotations,
                             },
+                            ...(url ? { href: url } : {}),
                         },
                     ];
                 case "mention":
@@ -107,6 +115,7 @@ export function buildRichTextObj(input, options = {}) {
                             annotations: {
                                 ...annotations,
                             },
+                            ...(url ? { href: url } : {}),
                         },
                     ];
                 default:
@@ -192,8 +201,38 @@ export function enforceRichTextObject(obj) {
         return buildRichTextObj(obj)[0];
     }
 
-    if (obj.type && obj.text && typeof obj.text.content === "string") {
+    // Already-valid Notion rich text objects
+    if (obj?.type === "text" && obj?.text && typeof obj.text.content === "string") {
         return obj;
+    }
+    if (obj?.type === "equation" && typeof obj?.equation?.expression === "string") {
+        return obj;
+    }
+    if (obj?.type === "mention" && obj?.mention && typeof obj.mention === "object") {
+        return obj;
+    }
+
+    // Shorthand: equation provided as { type: "equation", expression: "..." }
+    if (obj?.type === "equation" && typeof obj?.expression === "string") {
+        return {
+            type: "equation",
+            equation: { expression: obj.expression },
+            ...(obj.annotations ? { annotations: obj.annotations } : {}),
+        };
+    }
+
+    // Shorthand: mentions provided as { type: one of mention subtypes, ...payload }
+    const mentionTypes = new Set(["database", "date", "link_preview", "page", "template_mention", "user"]);
+    if (mentionTypes.has(obj?.type)) {
+        const { annotations, type, ...rest } = obj;
+        return {
+            type: "mention",
+            mention: {
+                type,
+                [type]: rest,
+            },
+            ...(annotations ? { annotations } : {}),
+        };
     }
 
     console.warn(`Invalid rich text object. Returning empty rich text object.`);
