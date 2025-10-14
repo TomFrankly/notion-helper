@@ -19,6 +19,8 @@ export function isSingleEmoji(string) {
  * @returns {boolean}
  */
 export function isValidURL(string) {
+    validateStringLength({ string, type: "url" });
+    
     try {
         const url = new URL(string);
         return url.protocol === "http:" || url.protocol === "https:";
@@ -106,6 +108,93 @@ export function validatePDFURL(url) {
 }
 
 /**
+ * Checks string length against the max length and throws a warning if it is over the limit.
+ * @param {Object} options - the options for the function
+ * @param {string} options.string - the string to be checked
+ * @param {string} options.type - the type of string to be checked (text, equation, url, email, phone_number)
+ * @param {number} options.limit - the max length of the string
+ * @returns {void}
+ */
+export function validateStringLength({ string, type, limit }) {
+    
+    if (typeof string !== "string") {
+        console.warn(`Invalid input sent to validateStringLength(). Expected a string, got: ${typeof string}. String: ${string}. Type: ${type}. Limit: ${limit}.`);
+        return;
+    }
+
+    let resolvedLimit = limit;
+
+    if (typeof resolvedLimit !== "number" || resolvedLimit <= 0) {
+        switch (type) {
+            case "text":
+                resolvedLimit = CONSTANTS.MAX_TEXT_LENGTH;
+                break;
+            case "mention":
+                resolvedLimit = CONSTANTS.MAX_MENTION_LENGTH;
+                break;
+            case "equation":
+                resolvedLimit = CONSTANTS.MAX_EQUATION_LENGTH;
+                break;
+            case "url":
+                resolvedLimit = CONSTANTS.MAX_URL_LENGTH;
+                break;
+            case "email":
+                resolvedLimit = CONSTANTS.MAX_EMAIL_LENGTH;
+                break;
+            case "phone_number":
+                resolvedLimit = CONSTANTS.MAX_PHONE_NUMBER_LENGTH;
+                break;
+            default:
+                resolvedLimit = undefined;
+        }
+    }
+
+    if (typeof resolvedLimit === "number" && string.length > resolvedLimit) {
+        const displayString = string.length > 500 ? string.slice(0, 500) + '...[truncated]' : string;
+        console.warn(`String length is over the limit. String length: ${string.length}, Max length: ${resolvedLimit}. String: ${displayString}. Type: ${type}.`);
+    }
+}
+
+/**
+ * Checks array length against the max length and throws a warning if it is over the limit.
+ * @param {Object} options - the options for the function
+ * @param {Array} options.array - the array to be checked
+ * @param {string} options.type - the type of array to be checked (relation, multi_select, people)
+ * @param {number} options.limit - the max length of the array
+ * @returns {void}
+ */
+export function validateArrayLength({ array, type, limit }) {
+    
+    if (!Array.isArray(array)) {
+        console.warn(`Invalid input sent to validateArrayLength(). Expected an array, got: ${typeof array}. Array: ${array}. Type: ${type}. Limit: ${limit}.`);
+        return;
+    }
+
+    let resolvedLimit = limit;
+
+    if (typeof resolvedLimit !== "number" || resolvedLimit <= 0) {
+        switch (type) {
+            case "relation":
+                resolvedLimit = CONSTANTS.MAX_RELATION_COUNT;
+                break;
+            case "multi_select":
+                resolvedLimit = CONSTANTS.MAX_MULTI_SELECT_COUNT;
+                break;
+            case "people":
+                resolvedLimit = CONSTANTS.MAX_PEOPLE_COUNT;
+                break;
+            default:
+                resolvedLimit = undefined;
+        }
+    }
+
+    if (typeof resolvedLimit === "number" && array.length > resolvedLimit) {
+        const displayArray = array.length > 10 ? array.slice(0, 10) + '...[truncated]' : array;
+        console.warn(`Array length is over the limit. Array length: ${array.length}, Max length: ${resolvedLimit}. Array: ${displayArray}. Type: ${type}.`);
+    }
+}
+
+/**
  * Enforces a length limit on a string. Returns the original string in a single-element array if it is under the limit. If not, returns an array with string chunks under the limit.
  *
  * @param {string} string - the string to be tested
@@ -164,10 +253,33 @@ export function enforceStringLength(string, limit) {
 }
 
 /**
- * Validates Date object or string input that represents a date, and converts it to an ISO-8601 date string if possible.
+ * Validates a Date object or string input that represents a date, and converts it to an ISO-8601 date string if possible.
+ *
+ * If the input is a string without time information, returns just the date (YYYY-MM-DD).
+ * If the input is a Date object or a string with time info, returns full ISO string.
+ * Returns null if the input is invalid.
  * 
- * @param {(string|Date)} date - a Date object or string representing a date 
- * @returns {string}
+ * @param {(string|Date)} dateInput - A Date object or string representing a date 
+ * @returns {string|null} ISO-8601 date string, or null if input is invalid
+ *
+ * @example
+ * // Returns "2023-12-01"
+ * validateDate("2023-12-01")
+ *
+ * // Returns "2023-12-01T15:30:00.000Z"
+ * validateDate("2023-12-01T15:30:00Z")
+ * 
+ * // Returns "2023-12-01T00:00:00.000Z"
+ * validateDate(new Date("2023-12-01"))
+ * 
+ * // Handles non-ISO date strings, Returns "2023-09-10T00:00:00.000Z" (browser timezone may affect result)
+ * validateDate("September 10, 2023")
+ * 
+ * // Handles other common formats, Returns "2023-07-04T00:00:00.000Z"
+ * validateDate("07/04/2023")
+ * 
+ * // Returns null (invalid input)
+ * validateDate("not a date")
  */
 export function validateDate(dateInput) {
     let date

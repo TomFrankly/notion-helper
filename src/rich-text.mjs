@@ -1,4 +1,4 @@
-import { enforceStringLength, isValidURL } from "./utils.mjs";
+import { enforceStringLength, isValidURL, isValidUUID, validateStringLength, validateDate } from "./utils.mjs";
 
 /**
  * Builds a Rich Text Object. See: https://developers.notion.com/reference/rich-text
@@ -56,9 +56,18 @@ export function buildRichTextObj(input, options = {}) {
 
     const { annotations = {}, url, type = "text" } = options;
 
+    // Validate URL if provided
+    if (url) {
+        const isValid = isValidURL(url);
+        if (!isValid) {
+            console.warn(`Invalid URL provided. URL: ${url}. Input string: ${input}. Options: ${JSON.stringify(options)}.`);
+        }
+    }
+
     if (typeof input === "string") {
         switch (type) {
             case "text":
+                validateStringLength({ string: input, type: "text" });
                 return [
                     {
                         type: "text",
@@ -69,9 +78,11 @@ export function buildRichTextObj(input, options = {}) {
                         annotations: {
                             ...annotations,
                         },
+                        ...(url ? { href: url } : {}),
                     },
                 ];
             case "equation":
+                validateStringLength({ string: input, type: "equation" });
                 return [
                     {
                         type: "equation",
@@ -81,6 +92,7 @@ export function buildRichTextObj(input, options = {}) {
                         annotations: {
                             ...annotations,
                         },
+                        ...(url ? { href: url } : {}),
                     },
                 ];
         }
@@ -97,6 +109,7 @@ export function buildRichTextObj(input, options = {}) {
         } else {
             switch (type) {
                 case "equation":
+                    validateStringLength({ string: input.expression, type: "equation" });
                     return [
                         {
                             type: "equation",
@@ -119,16 +132,157 @@ export function buildRichTextObj(input, options = {}) {
                         },
                     ];
                 default:
-                    const error = `Unsupported rich text type: ${input.type}`;
+                    const error = `Unsupported rich text type: ${type}`;
                     console.error(error);
                     throw new Error(error);
             }
         }
     }
 
-    const error = `Invalid input send to buildRichTextObj()`;
+    const error = `Invalid input sent to buildRichTextObj()`;
     console.error(error);
     throw new Error(error);
+}
+
+/**
+ * Creates a user mention with shorthand syntax.
+ * @param {string} userId - The user ID to mention
+ * @param {Object} [options] - Additional options for the mention
+ * @param {Object} [options.annotations] - Text annotations (bold, italic, etc.)
+ * @param {string} [options.url] - URL for the mention
+ * @returns {Array<Object>} - Array with a single Rich Text Object containing the user mention
+ * 
+ * @example
+ * // Simple user mention
+ * mentionUser("user_123")
+ * 
+ * // User mention with annotations
+ * mentionUser("user_123", { annotations: { bold: true, color: "blue" } })
+ */
+export function mentionUser(userId, options = {}) {
+    if (!isValidUUID(userId)) {
+        console.warn(`Invalid user ID. User ID: ${userId}.`);
+    }
+
+    return buildRichTextObj(
+        { type: "user", user: { id: userId } },
+        { type: "mention", ...options }
+    );
+}
+
+/**
+ * Creates a date mention with shorthand syntax.
+ * @param {string|Object} date - The date string or date object
+ * @param {Object} [options] - Additional options for the mention
+ * @param {Object} [options.annotations] - Text annotations (bold, italic, etc.)
+ * @param {string} [options.url] - URL for the mention
+ * @returns {Array<Object>} - Array with a single Rich Text Object containing the date mention
+ * 
+ * @example
+ * // Simple date mention
+ * mentionDate("2025-01-01")
+ * 
+ * // Date mention with time range
+ * mentionDate({ start: "2025-01-01", end: "2025-01-02" })
+ * 
+ * // Date mention with annotations
+ * mentionDate("2025-01-01", { annotations: { bold: true } })
+ */
+export function mentionDate(date, options = {}) {
+    const dateObj = typeof date === "string" ? { start: date } : date;
+
+    if (!dateObj || !dateObj.start) {
+        console.warn(`Invalid date. Date: ${date}.`);
+    }
+
+    if (dateObj.end && !dateObj.start) {
+        console.warn(`Invalid date. Date: ${date}. End date provided without start date.`);
+    }
+
+    const validatedDateObj = {
+        start: validateDate(dateObj.start),
+        end: dateObj.end ? validateDate(dateObj.end) : null,
+    }
+
+    return buildRichTextObj(
+        { type: "date", date: validatedDateObj },
+        { type: "mention", ...options }
+    );
+}
+
+/**
+ * Creates a database mention with shorthand syntax.
+ * @param {string} databaseId - The database ID to mention
+ * @param {Object} [options] - Additional options for the mention
+ * @param {Object} [options.annotations] - Text annotations (bold, italic, etc.)
+ * @param {string} [options.url] - URL for the mention
+ * @returns {Array<Object>} - Array with a single Rich Text Object containing the database mention
+ * 
+ * @example
+ * // Simple database mention
+ * mentionDatabase("database_123")
+ * 
+ * // Database mention with annotations
+ * mentionDatabase("database_123", { annotations: { italic: true } })
+ */
+export function mentionDatabase(databaseId, options = {}) {
+    if (!isValidUUID(databaseId)) {
+        console.warn(`Invalid database ID. Database ID: ${databaseId}.`);
+    }
+
+    return buildRichTextObj(
+        { type: "database", database: { id: databaseId } },
+        { type: "mention", ...options }
+    );
+}
+
+/**
+ * Creates a page mention with shorthand syntax.
+ * @param {string} pageId - The page ID to mention
+ * @param {Object} [options] - Additional options for the mention
+ * @param {Object} [options.annotations] - Text annotations (bold, italic, etc.)
+ * @param {string} [options.url] - URL for the mention
+ * @returns {Array<Object>} - Array with a single Rich Text Object containing the page mention
+ * 
+ * @example
+ * // Simple page mention
+ * mentionPage("page_123")
+ * 
+ * // Page mention with annotations
+ * mentionPage("page_123", { annotations: { color: "green" } })
+ */
+export function mentionPage(pageId, options = {}) {
+    if (!isValidUUID(pageId)) {
+        console.warn(`Invalid page ID. Page ID: ${pageId}.`);
+    }
+
+    return buildRichTextObj(
+        { type: "page", page: { id: pageId } },
+        { type: "mention", ...options }
+    );
+}
+
+/**
+ * Creates a link preview mention with shorthand syntax.
+ * @param {string} url - The URL to create a link preview for
+ * @param {Object} [options] - Additional options for the mention
+ * @param {Object} [options.annotations] - Text annotations (bold, italic, etc.)
+ * @param {string} [options.url] - URL for the mention
+ * @returns {Array<Object>} - Array with a single Rich Text Object containing the link preview mention
+ * 
+ * @example
+ * // Simple link preview mention
+ * mentionLinkPreview("https://www.youtube.com/watch?v=dQw4w9WgXcQ")
+ * 
+ * // Link preview mention with annotations
+ * mentionLinkPreview("https://example.com", { annotations: { bold: true } })
+ */
+export function mentionLinkPreview(url, options = {}) {
+    validateStringLength({ string: url, type: "url" });
+    return buildRichTextObj(
+        { type: "link_preview", link_preview: { url } },
+        { type: "mention", ...options }
+    );
 }
 
 // TODO: Run everything passed to enforceRichText through enforceStringLength
@@ -203,17 +357,22 @@ export function enforceRichTextObject(obj) {
 
     // Already-valid Notion rich text objects
     if (obj?.type === "text" && obj?.text && typeof obj.text.content === "string") {
+        validateStringLength({ string: obj.text.content, type: "text" });
         return obj;
     }
     if (obj?.type === "equation" && typeof obj?.equation?.expression === "string") {
+        validateStringLength({ string: obj.equation.expression, type: "equation" });
         return obj;
     }
     if (obj?.type === "mention" && obj?.mention && typeof obj.mention === "object") {
+        validateStringLength({ string: obj.mention.type, type: "mention" });
         return obj;
     }
 
     // Shorthand: equation provided as { type: "equation", expression: "..." }
     if (obj?.type === "equation" && typeof obj?.expression === "string") {
+        validateStringLength({ string: obj.expression, type: "equation" });
+        
         return {
             type: "equation",
             equation: { expression: obj.expression },

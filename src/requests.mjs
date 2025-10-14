@@ -181,7 +181,7 @@ export const request = {
                     
                     const wouldExceedPayload = currentPayloadSize + blockSize > MAX_PAYLOAD_SIZE;
                     const wouldExceedBlockLimit = data.children.length >= CONSTANTS.MAX_BLOCKS;
-                    const wouldExceedTotalBlocks = totalBlockCount + countBlocksIncludingChildren(block) > CONSTANTS.MAX_BLOCKS_REQEST;
+                    const wouldExceedTotalBlocks = totalBlockCount + countBlocksIncludingChildren(block) > CONSTANTS.MAX_BLOCKS_REQUEST;
                     const blockHasNestedChildren = hasNestedChildren(block);
                     const blockHasExcessiveChildren = hasExcessiveChildrenArray(block);
                     
@@ -410,7 +410,7 @@ export const request = {
 
                             const chunkChildren = []
 
-                            const blockLimit = CONSTANTS.MAX_BLOCKS_REQEST
+                            const blockLimit = CONSTANTS.MAX_BLOCKS_REQUEST
                             const blocksInChunk = getTotalCount(chunk)
 
                             const maxChildArrayLimit = CONSTANTS.MAX_BLOCKS

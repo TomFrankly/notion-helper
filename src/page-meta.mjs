@@ -1,6 +1,6 @@
 import { setIcon } from "./emoji-and-files.mjs";
 import { enforceRichText } from "./rich-text.mjs";
-import { isValidURL, isValidUUID, validateDate } from "./utils.mjs";
+import { isValidURL, isValidUUID, validateDate, validateStringLength, validateArrayLength } from "./utils.mjs";
 
 /**
  * Object with methods for constructing Notion page metadata, including parent, page, block, property, cover, and icon.
@@ -372,7 +372,7 @@ export const page_props = {
          * @returns {Object} An email property object.
          */
         setProp: (value) => ({
-            email: validateValue(value, "string"),
+            email: validateValue(value, "email"),
         }),
     },
 
@@ -538,6 +538,7 @@ export const page_props = {
                 };
             } else if (Array.isArray(values)) {
                 // array case
+                validateArrayLength({ array: values, type: "multi_select" });
                 const validValues = values
                     .map((value) => {
                         const validatedValue = validateValue(value, "string");
@@ -614,6 +615,7 @@ export const page_props = {
             if (typeof values === "string") {
                 people = [processUser(values)];
             } else if (Array.isArray(values)) {
+                validateArrayLength({ array: values, type: "people" });
                 people = values.map(processUser).filter(Boolean);
             } else if (typeof values === "object" && values !== null) {
                 people = [processUser(values)];
@@ -645,7 +647,7 @@ export const page_props = {
          * @returns {Object} A phone number property object.
          */
         setProp: (value) => ({
-            phone_number: validateValue(value, "string"),
+            phone_number: validateValue(value, "phone_number"),
         }),
     },
 
@@ -684,6 +686,7 @@ export const page_props = {
                 relations = [processRelation(values)];
             } else if (Array.isArray(values)) {
                 // Array case
+                validateArrayLength({ array: values, type: "relation" });
                 relations = values.map(processRelation).filter(Boolean);
             } else if (typeof values === "object") {
                 // Single object case
@@ -759,7 +762,7 @@ export const page_props = {
          * @returns {Object} A URL property object.
          */
         setProp: (value) => ({
-            url: validateValue(value, "string"),
+            url: validateValue(value, "url"),
         }),
     },
 };
@@ -1004,6 +1007,30 @@ function validateValue(value, type) {
             console.warn(`Invalid URL. Returning null.`);
             return null;
         }
+    }
+
+    if (type === "email") {
+        if (typeof value !== "string") {
+            console.warn(
+                `Invalid data type passed to a email property. Returning null.`
+            );
+            return null;
+        }
+
+        validateStringLength({ string: value, type: "email" });
+        return value;
+    }
+
+    if (type === "phone_number") {
+        if (typeof value !== "string") {
+            console.warn(
+                `Invalid data type passed to a phone number property. Returning null.`
+            );
+            return null;
+        }
+                
+        validateStringLength({ string: value, type: "phone_number" });
+        return value;
     }
 
     if (type === "UUID") {
