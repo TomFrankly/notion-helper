@@ -403,3 +403,219 @@ export function getPayloadSize(arr) {
     
     return size;
 }
+
+/**
+ * Validates a well-formed Notion block and splits it into multiple blocks if needed.
+ * 
+ * This function performs validation and splitting for different types of rich text content:
+ * 1. Main rich_text arrays (paragraph, heading, etc.) - splits individual objects and handles MAX_BLOCKS limit
+ * 2. Caption arrays (image, video, audio, file, pdf, code blocks) - splits individual objects but doesn't duplicate blocks
+ * 
+ * For blocks with main rich_text arrays, if the resulting array exceeds MAX_BLOCKS (100), 
+ * the function splits into multiple blocks of the same type. Children are preserved only 
+ * for the first split block to avoid duplication. For blocks with captions, only the caption 
+ * rich text objects are processed without duplicating the block. If a caption array exceeds 
+ * MAX_BLOCKS after processing, it is truncated to the first 100 objects with a console warning.
+ * 
+ * @param {Object} block - A well-formed Notion block object
+ * @param {number} [limit] - Optional custom limit for text length. If not provided, uses CONSTANTS.MAX_TEXT_LENGTH
+ * @returns {Array<Object>} - Array containing the original block if valid, or multiple blocks if split was necessary
+ * 
+ * @example
+ * // Block with short text - returns original block
+ * const shortBlock = {
+ *   type: "paragraph",
+ *   paragraph: {
+ *     rich_text: [{ type: "text", text: { content: "Short text" } }]
+ *   }
+ * };
+ * const result1 = validateAndSplitBlock(shortBlock);
+ * // Returns: [shortBlock]
+ * 
+ * // Block with long text in single rich text object - splits the rich text object
+ * const longBlock = {
+ *   type: "paragraph", 
+ *   paragraph: {
+ *     rich_text: [{ type: "text", text: { content: "Very long text that exceeds the limit..." } }],
+ *     color: "blue"
+ *   }
+ * };
+ * const result2 = validateAndSplitBlock(longBlock);
+ * // Returns: [block] with multiple rich text objects in the rich_text array
+ * 
+ * // Image block with long caption - processes caption without duplicating block
+ * const imageBlock = {
+ *   type: "image",
+ *   image: {
+ *     type: "external",
+ *     external: { url: "https://example.com/image.jpg" },
+ *     caption: [{ type: "text", text: { content: "Very long caption..." } }]
+ *   }
+ * };
+ * const result3 = validateAndSplitBlock(imageBlock);
+ * // Returns: [imageBlock] with processed caption rich text
+ * 
+ * // Heading block with children - children preserved only in first split block
+ * const headingWithChildren = {
+ *   type: "heading_1",
+ *   heading_1: {
+ *     rich_text: Array(150).fill().map((_, i) => ({ 
+ *       type: "text", 
+ *       text: { content: `Heading text ${i}` } 
+ *     })),
+ *     children: [{ type: "paragraph", paragraph: { rich_text: [] } }] // 100 child blocks
+ *   }
+ * };
+ * const result4 = validateAndSplitBlock(headingWithChildren);
+ * // Returns: [heading1, heading2] where only heading1 has children
+ * 
+ * // Image block with too many caption objects - truncates and warns
+ * const imageWithManyCaptions = {
+ *   type: "image",
+ *   image: {
+ *     type: "external",
+ *     external: { url: "https://example.com/image.jpg" },
+ *     caption: Array(150).fill().map((_, i) => ({ 
+ *       type: "text", 
+ *       text: { content: `Caption ${i}` } 
+ *     }))
+ *   }
+ * };
+ * const result4 = validateAndSplitBlock(imageWithManyCaptions);
+ * // Returns: [imageBlock] with caption truncated to first 100 objects + console warning
+ */
+export function validateAndSplitBlock(block, limit) {
+    if (!block || typeof block !== "object") {
+        console.warn(`Invalid input sent to validateAndSplitBlock(). Expected a Notion block object, got: ${typeof block}. Block: ${block}.`);
+        return [];
+    }
+
+    if (!block.type) {
+        console.warn(`Invalid Notion block: missing 'type' property. Block: ${JSON.stringify(block)}.`);
+        return [];
+    }
+
+    const blockContent = block[block.type];
+    if (!blockContent) {
+        return [block];
+    }
+
+    function processRichTextArray(richTextArray, textLimit = limit) {
+        const processedRichText = [];
+        
+        for (const richTextItem of richTextArray) {
+            if (richTextItem.type === "text" && richTextItem.text && richTextItem.text.content) {
+                const textChunks = enforceStringLength(richTextItem.text.content, textLimit);
+                
+                for (const chunk of textChunks) {
+                    processedRichText.push({
+                        ...richTextItem,
+                        text: {
+                            ...richTextItem.text,
+                            content: chunk
+                        }
+                    });
+                }
+            } else if (richTextItem.type === "equation" && richTextItem.equation && richTextItem.equation.expression) {
+                const equationChunks = enforceStringLength(richTextItem.equation.expression, CONSTANTS.MAX_EQUATION_LENGTH);
+                
+                for (const chunk of equationChunks) {
+                    processedRichText.push({
+                        ...richTextItem,
+                        equation: {
+                            ...richTextItem.equation,
+                            expression: chunk
+                        }
+                    });
+                }
+            } else {
+                processedRichText.push(richTextItem);
+            }
+        }
+        
+        return processedRichText;
+    }
+
+    if (blockContent.rich_text) {
+        const processedRichText = processRichTextArray(blockContent.rich_text);
+
+        if (processedRichText.length <= CONSTANTS.MAX_BLOCKS) {
+            return [{
+                ...block,
+                [block.type]: {
+                    ...blockContent,
+                    rich_text: processedRichText
+                }
+            }];
+        }
+
+        const splitBlocks = [];
+        const chunkSize = CONSTANTS.MAX_BLOCKS;
+        
+        for (let i = 0; i < processedRichText.length; i += chunkSize) {
+            const richTextChunk = processedRichText.slice(i, i + chunkSize);
+            const isFirstBlock = i === 0;
+            
+            const newBlock = {
+                type: block.type,
+                [block.type]: {
+                    ...blockContent,
+                    rich_text: richTextChunk
+                }
+            };
+
+            if (blockContent.color) {
+                newBlock[block.type].color = blockContent.color;
+            }
+            
+            if (isFirstBlock && blockContent.children) {
+                newBlock[block.type].children = blockContent.children;
+            }
+
+            splitBlocks.push(newBlock);
+        }
+
+        console.info(`Block split into ${splitBlocks.length} blocks due to rich text array exceeding MAX_BLOCKS limit. Original rich text count: ${blockContent.rich_text.length}, Processed count: ${processedRichText.length}.`);
+        
+        return splitBlocks;
+    }
+
+    const captionBlockTypes = ['image', 'video', 'audio', 'file', 'pdf', 'code'];
+    if (captionBlockTypes.includes(block.type) && blockContent.caption) {
+        const processedCaption = processRichTextArray(blockContent.caption);
+        
+        if (processedCaption.length > CONSTANTS.MAX_BLOCKS) {
+            const truncatedCaption = processedCaption.slice(0, CONSTANTS.MAX_BLOCKS);
+            
+            let previewText = "";
+            if (processedCaption[0] && processedCaption[0].type === "text" && processedCaption[0].text && processedCaption[0].text.content) {
+                previewText = processedCaption[0].text.content;
+            } else if (processedCaption[0] && processedCaption[0].type === "equation" && processedCaption[0].equation && processedCaption[0].equation.expression) {
+                previewText = processedCaption[0].equation.expression;
+            }
+            
+            const displayText = previewText.length > 500 ? previewText.slice(0, 500) + '...[truncated]' : previewText;
+            
+            console.warn(`Caption array exceeded MAX_BLOCKS limit (${CONSTANTS.MAX_BLOCKS}). Truncated from ${processedCaption.length} to ${CONSTANTS.MAX_BLOCKS} rich text objects. Block type: ${block.type}. Preview: ${displayText}`);
+            
+            return [{
+                ...block,
+                [block.type]: {
+                    ...blockContent,
+                    caption: truncatedCaption
+                }
+            }];
+        }
+        
+        return [{
+            ...block,
+            [block.type]: {
+                ...blockContent,
+                caption: processedCaption
+            }
+        }];
+    }
+
+    return [block];
+}
+

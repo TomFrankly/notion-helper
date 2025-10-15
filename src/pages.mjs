@@ -3,7 +3,7 @@ import { makeParagraphBlocks } from "./blocks.mjs";
 import { page_meta, page_props } from "./page-meta.mjs";
 import { block } from "./blocks.mjs";
 import CONSTANTS from "./constants.mjs";
-import { enforceStringLength } from "./utils.mjs";
+import { enforceStringLength, validateAndSplitBlock } from "./utils.mjs";
 
 // TODO - allow passing in a Notion db response in order to validate against the db itself
 // TODO - allow passing in a request callback function so the library can make API requests for you
@@ -915,8 +915,10 @@ export function createNotionBuilder({
         /**
          * Adds an existing Notion block to the current level in the block hierarchy.
          * This method is useful when you have a pre-constructed Notion block that you want to add directly.
+         * The block will be automatically validated and split if it exceeds Notion API limits.
          *
          * @param {Object} existingBlock - A valid Notion block object to add.
+         * @param {number} [limit] - Optional custom limit for text length validation.
          * @returns {this} The builder instance for method chaining.
          * @example
          * // Add a pre-constructed paragraph block
@@ -927,8 +929,17 @@ export function createNotionBuilder({
          *   }
          * };
          * notion.addExistingBlock(myBlock);
+         * 
+         * // Add a block with long text - will be automatically split if needed
+         * const longBlock = {
+         *   type: "heading_1",
+         *   heading_1: {
+         *     rich_text: [{ type: "text", text: { content: "Very long heading text..." } }]
+         *   }
+         * };
+         * notion.addExistingBlock(longBlock); // May result in multiple blocks if split
          */
-        addExistingBlock(existingBlock) {
+        addExistingBlock(existingBlock, limit) {
             if (!existingBlock || typeof existingBlock !== 'object' || !existingBlock.type) {
                 if (strict === true) {
                     const error = `Invalid block provided to addExistingBlock():\n\nBlock: ${JSON.stringify(existingBlock)}\n\nStrict mode is enabled, so this method is throwing an error.`;
@@ -942,7 +953,12 @@ export function createNotionBuilder({
                 }
             }
 
-            currentBlockStack[currentBlockStack.length - 1].children.push(existingBlock);
+            const validatedBlocks = validateAndSplitBlock(existingBlock, limit);
+            
+            for (const validatedBlock of validatedBlocks) {
+                currentBlockStack[currentBlockStack.length - 1].children.push(validatedBlock);
+            }
+            
             hasBlock = true;
             return this;
         },

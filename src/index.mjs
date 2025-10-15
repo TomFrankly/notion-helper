@@ -33,7 +33,7 @@ import { setIcon } from "./emoji-and-files.mjs";
 import { page_meta, page_props, parentDatabase, parentDb, parentDataSource, parentDs, parentPage, pageId, blockId, propertyId, cover, icon, title, richText, checkbox, date, email, files, multiSelect, number, people, phoneNumber, relation, select, status, url } from "./page-meta.mjs";
 import { quickPages, createNotionBuilder, createNotion } from "./pages.mjs";
 import { request, createPage, appendBlocks } from "./requests.mjs";
-import { getDepth, getLongestArray, getTotalCount, getPayloadSize } from "./utils.mjs";
+import { getDepth, getLongestArray, getTotalCount, getPayloadSize, validateAndSplitBlock } from "./utils.mjs";
 
 export {
     buildRichTextObj,
@@ -102,6 +102,7 @@ export {
     getLongestArray,
     getTotalCount,
     getPayloadSize,
+    validateAndSplitBlock,
 }
 
 const NotionHelper = {
@@ -169,6 +170,7 @@ const NotionHelper = {
     getLongestArray,
     getTotalCount,
     getPayloadSize,
+    validateAndSplitBlock,
 }
 
 export default NotionHelper
