@@ -619,3 +619,19 @@ export function validateAndSplitBlock(block, limit) {
     return [block];
 }
 
+/**
+ * Extracts the Notion page ID (UUID, with or without dashes) from a URL.
+ * Handles both dashed and non-dashed formats found in URLs.
+ * 
+ * @param {string} url - The URL to extract the page ID from.
+ * @returns {string|null} The 32-character page ID without dashes, or null if not found.
+ */
+export function extractNotionPageId(url) {
+    if (!url || typeof url !== "string") return null;
+
+    const [baseUrl] = url.split('?');
+    const regex = /([a-f0-9]{32}|[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12})(?![a-f0-9])/i;
+    const match = baseUrl.match(regex);
+    if (!match) return null;
+    return match[1].replace(/-/g, '');
+}

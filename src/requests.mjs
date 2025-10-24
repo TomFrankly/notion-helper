@@ -80,7 +80,10 @@ export const request = {
          * @param {Function} [options.apiCall] - A custom function for making API calls. Either this or client must be provided.
          * @param {Function} [options.getPage=(response) => response] - A function to extract the page data from the API response. If you're passing a custom apiCall function, you should pass a getPage function as well.
          * @param {Function} [options.getResults=(response) => response.results] - A function to extract results from the API response when appending blocks. Enables the append() method to append all child blocks in the request. If you're passing a custom apiCall function, you should pass a getResults function as well.
-         * @returns {Promise<Object>} An object containing the API response for page creation and, if applicable, the result of appending children.
+         * @param {number} [options.templateWaitMs=3000] - Milliseconds to wait after page creation when using templates, before appending children. This allows time for Notion's template processing to complete.
+         * @param {Function} [options.onTemplatePageCreated] - Optional callback function called after page creation but before appending children when using templates. Receives `{ page }` as parameter, where page is the created Notion page object. Can throw an error to stop execution and prevent children appending.
+         * @param {boolean} [options.skipAutoAppendOnTemplate=false] - If true, returns children to caller instead of auto-appending them when using templates. Useful for manual control over template verification.
+         * @returns {Promise<Object>} An object containing the API response for page creation and, if applicable, the result of appending children. When `skipAutoAppendOnTemplate` is true and templates are used, returns `{ apiResponse, pendingChildren, pageId }` instead.
          * @throws {Error} If no parent is provided or if there's an error during page creation or block appending.
          * @example
          * // Using with Notion SDK client
@@ -128,6 +131,41 @@ export const request = {
          *   getPage: (response) => response,
          *   getResults: (response) => response.results
          * });
+         *
+         * // Using with templates
+         * const templatePage = createNotionBuilder()
+         *      .parentDataSource("your-data-source-id")
+         *      .template("default") // or template_id
+         *      .title("Name", "Task from Template")
+         *      .paragraph("This content will be appended after template processing")
+         *      .build()
+         *
+         * const result = await request.pages.create({
+         *   data: templatePage.content,
+         *   client: notion,
+         *   templateWaitMs: 2000, // Wait 2 seconds for template processing
+         *   onTemplatePageCreated: async ({ page }) => {
+         *     console.log(`Template page created: ${page.id}`);
+         *     // Optional: Verify template content is ready
+         *     // page.parent contains data_source_id or database_id if needed
+         *   }
+         * });
+         *
+         * // Using skipAutoAppendOnTemplate for manual control
+         * const result = await request.pages.create({
+         *   data: templatePage.content,
+         *   client: notion,
+         *   skipAutoAppendOnTemplate: true
+         * });
+         *
+         * // Manually append children after verifying template is ready
+         * if (result.pendingChildren && result.pendingChildren.length > 0) {
+         *   await request.blocks.children.append({
+         *     block_id: result.pageId,
+         *     children: result.pendingChildren,
+         *     client: notion
+         *   });
+         * }
          */
         create: async ({
             data,
@@ -135,6 +173,9 @@ export const request = {
             apiCall,
             getPage = (response) => response,
             getResults = (response) => response.results,
+            templateWaitMs = 3000,
+            onTemplatePageCreated,
+            skipAutoAppendOnTemplate = false,
         }) => {
             if (!data.parent) {
                 const error = `No parent page or database provided. Page cannot be created.`;
@@ -142,60 +183,64 @@ export const request = {
                 throw new Error(error);
             }
 
+            const isUsingTemplate = data.template && data.template.type && data.template.type !== "none";
+
             let pageChildren = [];
 
             if (data.children) {
                 pageChildren = [...data.children];
                 data.children = [];
 
-                const hasNestedChildren = (block) => {
-                    if (!block[block.type]?.children?.length) return false;
+                if (!isUsingTemplate) {
                     
-                    return block[block.type].children.some(child => 
-                        child[child.type]?.children?.length > 0
-                    );
-                };
+                    const hasNestedChildren = (block) => {
+                        if (!block[block.type]?.children?.length) return false;
+                        
+                        return block[block.type].children.some(child => 
+                            child[child.type]?.children?.length > 0
+                        );
+                    };
 
-                const countBlocksIncludingChildren = (block) => {
-                    let count = 1;
-                    if (block[block.type]?.children?.length) {
-                        count += block[block.type].children.length;
+                    const countBlocksIncludingChildren = (block) => {
+                        let count = 1;
+                        if (block[block.type]?.children?.length) {
+                            count += block[block.type].children.length;
+                        }
+                        return count;
+                    };
+
+                    const hasExcessiveChildrenArray = (block) => {
+                        if (!block[block.type]?.children?.length) return false;
+                        return block[block.type].children.length > CONSTANTS.MAX_BLOCKS;
+                    };
+
+                    const baseDataSize = new TextEncoder().encode(JSON.stringify(data)).length;
+                    const MAX_PAYLOAD_SIZE = CONSTANTS.MAX_PAYLOAD_SIZE;
+                    let currentPayloadSize = baseDataSize;
+                    let totalBlockCount = 0;
+
+                    let i = 0;
+                    for (; i < pageChildren.length; i++) {
+                        const block = pageChildren[i];
+                        const blockSize = new TextEncoder().encode(JSON.stringify(block)).length;
+                        
+                        const wouldExceedPayload = currentPayloadSize + blockSize > MAX_PAYLOAD_SIZE;
+                        const wouldExceedBlockLimit = data.children.length >= CONSTANTS.MAX_BLOCKS;
+                        const wouldExceedTotalBlocks = totalBlockCount + countBlocksIncludingChildren(block) > CONSTANTS.MAX_BLOCKS_REQUEST;
+                        const blockHasNestedChildren = hasNestedChildren(block);
+                        const blockHasExcessiveChildren = hasExcessiveChildrenArray(block);
+                        
+                        if (wouldExceedPayload || wouldExceedBlockLimit || wouldExceedTotalBlocks || blockHasNestedChildren || blockHasExcessiveChildren) {
+                            break;
+                        }
+
+                        data.children.push(block);
+                        currentPayloadSize += blockSize;
+                        totalBlockCount += countBlocksIncludingChildren(block);
                     }
-                    return count;
-                };
 
-                const hasExcessiveChildrenArray = (block) => {
-                    if (!block[block.type]?.children?.length) return false;
-                    return block[block.type].children.length > CONSTANTS.MAX_BLOCKS;
-                };
-
-                const baseDataSize = new TextEncoder().encode(JSON.stringify(data)).length;
-                const MAX_PAYLOAD_SIZE = CONSTANTS.MAX_PAYLOAD_SIZE;
-                let currentPayloadSize = baseDataSize;
-                let totalBlockCount = 0;
-
-                let i = 0;
-                for (; i < pageChildren.length; i++) {
-                    const block = pageChildren[i];
-                    const blockSize = new TextEncoder().encode(JSON.stringify(block)).length;
-                    
-                    const wouldExceedPayload = currentPayloadSize + blockSize > MAX_PAYLOAD_SIZE;
-                    const wouldExceedBlockLimit = data.children.length >= CONSTANTS.MAX_BLOCKS;
-                    const wouldExceedTotalBlocks = totalBlockCount + countBlocksIncludingChildren(block) > CONSTANTS.MAX_BLOCKS_REQUEST;
-                    const blockHasNestedChildren = hasNestedChildren(block);
-                    const blockHasExcessiveChildren = hasExcessiveChildrenArray(block);
-                    
-                    if (wouldExceedPayload || wouldExceedBlockLimit || wouldExceedTotalBlocks || blockHasNestedChildren || blockHasExcessiveChildren) {
-                        break;
-                    }
-
-                    data.children.push(block);
-                    currentPayloadSize += blockSize;
-                    totalBlockCount += countBlocksIncludingChildren(block);
+                    pageChildren = pageChildren.slice(i);
                 }
-
-                pageChildren = pageChildren.slice(i);
-
             }
 
             let callingFunction;
@@ -230,6 +275,28 @@ export const request = {
 
                 if (response) {
                     createdPage = getPage(response);
+                }
+
+                // Handle template-specific logic
+                if (createdPage && isUsingTemplate) {
+                    // Call user callback if provided
+                    if (typeof onTemplatePageCreated === 'function') {
+                        await onTemplatePageCreated({ page: createdPage });
+                    }
+                    
+                    // Wait for template processing
+                    if (templateWaitMs > 0) {
+                        await new Promise(resolve => setTimeout(resolve, templateWaitMs));
+                    }
+
+                    // Handle skipAutoAppendOnTemplate option
+                    if (skipAutoAppendOnTemplate && pageChildren && pageChildren.length > 0) {
+                        return {
+                            apiResponse: response,
+                            pendingChildren: pageChildren, // Return children for manual appending
+                            pageId: createdPage.id
+                        };
+                    }
                 }
 
                 if (createdPage && pageChildren && pageChildren.length > 0) {
@@ -624,7 +691,10 @@ export const request = {
  * @param {Function} [options.apiCall] - A custom function for making API calls. Either this or client must be provided.
  * @param {Function} [options.getPage] - A function to extract the page data from the API response. Defaults to (response) => response.
  * @param {Function} [options.getResults] - A function to extract results from the API response when appending blocks. Defaults to (response) => response.results.
- * @returns {Promise<Object>} An object containing the API response for page creation and, if applicable, the result of appending children.
+ * @param {number} [options.templateWaitMs=3000] - Milliseconds to wait after page creation when using templates, before appending children.
+ * @param {Function} [options.onTemplatePageCreated] - Optional callback function called after page creation but before appending children when using templates. Receives `{ page }` as parameter.
+ * @param {boolean} [options.skipAutoAppendOnTemplate=false] - If true, returns children to caller instead of auto-appending them when using templates.
+ * @returns {Promise<Object>} An object containing the API response for page creation and, if applicable, the result of appending children. When `skipAutoAppendOnTemplate` is true and templates are used, returns `{ apiResponse, pendingChildren, pageId }` instead.
  * @throws {Error} If no parent is provided or if there's an error during page creation or block appending.
  * @example
  * // Using with Notion SDK client

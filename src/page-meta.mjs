@@ -64,7 +64,7 @@ export const page_meta = {
          * @param {string} page_id - The ID of the page.
          * @returns {string} A string-validated page ID.
          */
-        createMeta: (page_id) => validateValue(page_id),
+        createMeta: (page_id) => validateValue(page_id, "UUID"),
     },
 
     /**
@@ -81,7 +81,7 @@ export const page_meta = {
          * @param {string} block_id - The ID of the block.
          * @returns {string} A string-validated block ID.
          */
-        createMeta: (block_id) => validateValue(block_id),
+        createMeta: (block_id) => validateValue(block_id, "UUID"),
     },
 
     /**
@@ -98,7 +98,7 @@ export const page_meta = {
          * @param {string} property_id - The ID of the property.
          * @returns {string} A string-validated property ID.
          */
-        createMeta: (property_id) => validateValue(property_id),
+        createMeta: (property_id) => validateValue(property_id, "string"),
     },
 
     /**
@@ -133,6 +133,65 @@ export const page_meta = {
          * @returns {Object} A cover metadata object.
          */
         createMeta: (value) => setIcon(value),
+    },
+
+    /**
+     * Metadata definition for a data source template.
+     * 
+     * @namespace
+     * @property {string} type - The data type the property accepts.
+     */
+    template: {
+        type: "string",
+        /**
+         * Creates a data source template object.
+         * @function
+         * @param {(Object|string)} templateChoice - The template to use for the page. Can be:
+         *   - A fully-formed template object, e.g.:
+         *     {
+         *       type: "template_id",
+         *       template_id: "your-template-id"
+         *     }
+         *   - A string value:
+         *     - "none": Do not use a template.
+         *     - "default": Use the default template, if available.
+         *     - A valid template page ID (a valid UUID string).
+         * @returns {Object} A data source template metadata object.
+         */
+        createMeta: (templateChoice) => {
+            if (templateChoice === undefined || templateChoice === null || typeof templateChoice !== "string" && typeof templateChoice !== "object") {
+                console.warn("template() method called in builder without a valid template choice. Ignoring this method call.");
+                return null;
+            }
+            
+            if (typeof templateChoice === "string") {
+                if (templateChoice === "none") {
+                    return null;
+                } else if (templateChoice === "default") {
+                    return { type: "default" };
+                } else if (isValidUUID(templateChoice)) {
+                    return { type: "template_id", template_id: templateChoice };
+                } else {
+                    console.warn(`Invalid template choice: ${templateChoice} – returning null.`)
+                    return null;
+                }
+            } else if (typeof templateChoice === "object") {
+                // Check that the object has a type property
+                if (!templateChoice.hasOwnProperty("type")) {
+                    console.warn(`Template object does not have a "type" property. Returning null.`);
+                    return null;
+                }
+                
+                if (templateChoice.type === "template_id" && templateChoice.hasOwnProperty("template_id") && isValidUUID(templateChoice.template_id)) {
+                    return templateChoice;
+                } else if (templateChoice.type === "default" || templateChoice.type === "none") {
+                    return templateChoice;
+                } else {
+                    console.warn(`Invalid template choice: ${templateChoice} – returning null.`)
+                    return null;
+                }
+            }
+        }
     },
 };
 

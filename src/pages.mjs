@@ -3,7 +3,7 @@ import { makeParagraphBlocks } from "./blocks.mjs";
 import { page_meta, page_props } from "./page-meta.mjs";
 import { block } from "./blocks.mjs";
 import CONSTANTS from "./constants.mjs";
-import { enforceStringLength, validateAndSplitBlock } from "./utils.mjs";
+import { enforceStringLength, validateAndSplitBlock, isValidUUID } from "./utils.mjs";
 
 // TODO - allow passing in a Notion db response in order to validate against the db itself
 // TODO - allow passing in a request callback function so the library can make API requests for you
@@ -266,6 +266,7 @@ export function quickPages({ parent, parent_type, pages, schema, childrenFn }) {
  * @param {boolean} [options.limitNesting=true] If true, limits nested children to 2 levels (Notion API limit).
  * @param {boolean} [options.limitChildren=true] If true, limits children arrays to 100 blocks, putting excess in additionalBlocks.
  * @param {boolean} [options.allowBlankParagraphs=false] If true, allows empty paragraph blocks.
+ * @param {boolean} [options.handleTemplatePageChildren=false] If true, automatically moves all children blocks to additionalBlocks when a template is applied (type is not "none"). This is required because the Notion API doesn't allow children blocks in page creation requests that apply templates.
  * @returns {NotionBuilder} A builder object with fluent interface methods for constructing Notion content.
  * 
  * @example
@@ -311,12 +312,36 @@ export function quickPages({ parent, parent_type, pages, schema, childrenFn }) {
  *     });
  *   }
  * }
+ * 
+ * // Using template with automatic children handling
+ * const templatePage = createNotionBuilder({ handleTemplatePageChildren: true })
+ *   .parentDataSource('data-source-id')
+ *   .template('default') // or template_id
+ *   .title('Name', 'Task from Template')
+ *   .paragraph('This content will be moved to additionalBlocks')
+ *   .toDo('Complete task', false)
+ *   .build();
+ * 
+ * // Create page with template, then append children
+ * const notion = new Client({ auth: process.env.NOTION_TOKEN });
+ * const newPage = await notion.pages.create(templatePage.content);
+ * 
+ * // Append the children that were moved to additionalBlocks
+ * if (templatePage.additionalBlocks && templatePage.additionalBlocks.length > 0) {
+ *   for (const blockChunk of templatePage.additionalBlocks) {
+ *     await notion.blocks.children.append({
+ *       block_id: newPage.id,
+ *       children: blockChunk
+ *     });
+ *   }
+ * }
  */
 export function createNotionBuilder({
     strict = false,
     limitNesting = true,
     limitChildren = true,
     allowBlankParagraphs = false,
+    handleTemplatePageChildren = false,
 } = {}) {
     let data,
         currentBlockStack,
@@ -508,6 +533,32 @@ export function createNotionBuilder({
             }
 
             data.icon = page_meta.icon.createMeta(url);
+            return this;
+        },
+
+        /**
+         * Sets a data source template for the page.
+         *
+         * @param {(Object|string)} templateChoice - The template to use for the page. Can be:
+         *   - A fully-formed template object, e.g.:
+         *     {
+         *       type: "template_id",
+         *       template_id: "your-template-id"
+         *     }
+         *   - A string value:
+         *     - "none": Do not use a template.
+         *     - "default": Use the default template, if available.
+         *     - A valid template page ID (a valid UUID string).
+         * @returns {this} The builder instance for method chaining.
+         */
+        template(templateChoice) {
+            // Default to "none" if call is malformed
+            if (templateChoice === undefined || templateChoice === null || typeof templateChoice !== "string" && typeof templateChoice !== "object") {
+                console.warn("template() method called in builder without a valid template choice. Ignoring this method call.");
+                return this;
+            }
+
+            data.template = page_meta.template.createMeta(templateChoice)
             return this;
         },
 
@@ -1438,6 +1489,14 @@ export function createNotionBuilder({
 
             if (hasProperty) {
                 removeNullProps(data.properties);
+            }
+
+            if (handleTemplatePageChildren && data.template && data.template.type && data.template.type !== "none") {
+                if (data.children && data.children.length > 0) {
+                    const chunkedBlocks = chunkBlocks(data.children);
+                    result.additionalBlocks = chunkedBlocks;
+                    data.children = [];
+                }
             }
 
             if (hasPageParent) {
