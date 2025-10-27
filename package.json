@@ -25,6 +25,7 @@
   },
   "devDependencies": {
     "esbuild": "^0.25.4",
+    "typedoc": "^0.28.14",
     "typescript": "^5.6.3"
   },
   "author": "Thomas Frank <thomas@thomasjfrank.com> (https://thomasjfrank.com)",
@@ -47,6 +48,7 @@
     "build:browser": "esbuild src/index.mjs --bundle --format=esm --outfile=dist/browser/index.js --external:@notionhq/client",
     "dev": "esbuild src/index.mjs --bundle --format=esm --outfile=dist/browser/index.js --external:@notionhq/client --watch",
     "clean": "rm -rf dist docs",
+    "docs": "typedoc && touch docs/.nojekyll",
     "prepublishOnly": "npm run clean && npm run build",
     "test": "echo \"Error: no test specified\" && exit 1"
   },

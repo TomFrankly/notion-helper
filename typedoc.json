@@ -1,0 +1,19 @@
+{
+  "entryPoints": ["src/index.mjs"],
+  "out": "docs",
+  "name": "Notion Helper",
+  "includeVersion": true,
+  "readme": "docs-readme.md",
+  "plugin": [],
+  "excludePrivate": true,
+  "excludeProtected": true,
+  "excludeExternals": true,
+  "categorizeByGroup": true,
+  "sort": ["source-order"],
+  "searchInComments": true,
+  "navigation": {
+    "includeCategories": true,
+    "includeGroups": true
+  }
+}
+
