@@ -1,109 +1,69 @@
 # Template Usage Guide: Working with Notion Data Source Templates
-
-This guide covers how to use Notion data source templates with the Notion Helper library, including best practices for production applications.
+This guide provides a tutorial and best practices for using the Notion-Helper library to apply data source templates when creating new pages via the Notion API.
 
 ## Overview
 
-Data source templates in Notion allow you to create pages with predefined content and structure. When using templates via the API, there are important considerations around timing and children block handling that this library addresses with **two levels of control**.
+The Notion API allows you to apply existing data source templates to new pages you create. Notion-Helper makes this even easier, providing options for automatic handling of templates and multiple levels of control.
 
-## Two Levels of Template Control
+Note that working with templates via the API introduces conplexity that you don't normally encounter when working with other API methods. This is due to the fact that the API does not allow you to send page children in a page-creation request that applies a template.
 
-### Level 1: Builder Level (`handleTemplatePageChildren`)
+Instead, you're expected to wait, verify that the template has finished applying, and then apply any additional child blocks.
 
-When `handleTemplatePageChildren: true` is set in the builder:
-- **All children blocks are moved to `additionalBlocks`**
-- **No children are included in the page creation request**
-- **You have full manual control** over when and how to append blocks
-- **The `request.pages.create()` function won't see any children to handle**
+Notion-Helper helps you do this by giving you **two levels of control**:
 
-### Level 2: Request Level (Template Parameters)
+1. **Request-Level:** – The automatic, done-for-you method. Uses either a pre-set delay or a callback to handle block-append timing. *(Library Default)*
+2. **Builder-Level:** – The manual option. When creating page objects via the builder, all child blocks are moved to `additionalBlocks`, allowing you to fully control when they are appended to a created page.
 
-When `handleTemplatePageChildren: false` (or not specified):
-- **Children remain in the page creation request**
-- **The `request.pages.create()` function handles template timing automatically**
-- **You can use callbacks and wait times** to control template processing
+Let's explore each level in detail and see some code examples.
 
-## Basic Template Usage
+## Creating Pages with Request-Level Control (Library Default)
 
-### Option A: Builder-Level Control (Manual Block Appending)
+The `creatPage()` method (which is an alias for `request.pages.create()`) gives you *several* tools for appending blocks after applying a template. 
+
+For each method, let's assume you've created a page object using `createNotionBuilder()`. We'll also assume you've created a `notion` client object.
+
+**To enabled request-level control, simply set `handleTemplatePageChildren: false` when configuring the builder.** I also recommend setting `limitChildren: false` and `limitNesting: false`, which prevents the builder from moving blocks that go beyond the Notion API's default request limits into the `additionalBlocks` property. These two settings are always recommended when using the `createPage()` method, since it intelligently handles all request limits.
 
 ```javascript
-import NotionHelper from "notion-helper";
-const { createNotionBuilder } = NotionHelper;
+import { createNotionBuilder } from "notion-helper";
+import { Client } from "@notionhq/client"
 
-const builder = createNotionBuilder({ 
-    handleTemplatePageChildren: true // All children go to additionalBlocks
-});
+const secret = process.env.NOTION_KEY;
+const notion = new Client({ auth: secret });
+
+const builder = createNotionBuilder({
+    limitChildren: false,
+    limitNesting: false,
+    handleTemplatePageChildren: false,
+}); // handleTemplatePageChildren defaults to false if you don't specify it
 
 const templatePage = builder
     .parentDataSource('your-data-source-id')
-    .template('default')
-    .title('Name', 'Task from Template')
-    .paragraph('This content will be in additionalBlocks')
-    .toDo('Complete task', false)
-    .build();
-
-// Create page first (no children in request)
-const notion = new Client({ auth: process.env.NOTION_TOKEN });
-const newPage = await notion.pages.create(templatePage.content);
-
-// Manually append blocks at your own pace
-if (templatePage.additionalBlocks && templatePage.additionalBlocks.length > 0) {
-    for (const blockChunk of templatePage.additionalBlocks) {
-        await notion.blocks.children.append({
-            block_id: newPage.id,
-            children: blockChunk
-        });
-    }
-}
-```
-
-### Option B: Request-Level Control (Automatic Handling)
-
-```javascript
-import NotionHelper from "notion-helper";
-const { createNotionBuilder } = NotionHelper;
-
-const builder = createNotionBuilder(); // handleTemplatePageChildren defaults to false
-
-const templatePage = builder
-    .parentDataSource('your-data-source-id')
-    .template('default')
+    .template('your-template-id')
     .title('Name', 'Task from Template')
     .paragraph('This content will be handled by request.pages.create()')
-    .toDo('Complete task', false)
-    .build();
-
-// Let request.pages.create() handle template timing and children
-const result = await request.pages.create({
-    data: templatePage.content,
-    client: notion,
-    templateWaitMs: 3000 // Automatic wait and append
-});
-```
-
-### Using Templates in Page Creation
-
-```javascript
-const templatePage = builder
-    .parentDataSource('your-data-source-id')
-    .template('default') // or specific template ID
-    .title('Name', 'Task from Template')
-    .paragraph('This content will be appended after template processing')
-    .toDo('Complete task', false)
+    .toDo('A task')
     .build();
 ```
 
-## Template Page Creation Methods
+From here, you have several ways in which you can handle appending blocks:
 
-### Method 1: Request-Level Automatic Handling (Recommended for Most Cases)
+1. Wait a certain number of milliseconds before automatically appending (simplest)
+2. Fetch the template page and compare its structure to your created page
+3. Create a webhook subscription and wait for a `page.content_updated` event
 
-**Use this when `handleTemplatePageChildren: false` (default)**
+### Method 1: Wait, Then Append
+
+The simplest method to handle automatic block-appending is waiting for a certain number of milliseconds, then just going for it. 
+
+This will likely work in 95% of cases, but is inherently more prone to error compared to actually comparing the page against the structure of the template (shown later in this guide), or waiting for a webhook event.
+
+Use this by providing a `templateWaitMs` value to `createPage()`.
 
 ```javascript
-import { request } from "notion-helper";
+import { createPage } from "notion-helper";
 
-const result = await request.pages.create({
+const result = await createPage({
     data: templatePage.content,
     client: notion,
     templateWaitMs: 3000, // Wait 3 seconds for template processing
@@ -114,41 +74,168 @@ console.log('Page created:', result.apiResponse.id);
 console.log('Children appended:', result.appendedBlocks);
 ```
 
-### Method 2: Request-Level With Custom Verification Callback
+### Method 2: Compare the Page Against the Template
 
-**Use this when `handleTemplatePageChildren: false` (default)**
+This is a more robust method. Instead of just waiting for a few seconds and then appending child blocks without truly checking if the template is fully applied, here you compare the template page itself against the created page.
+
+The example code gets the **number of top-level blocks** on the template page. If your create page has the same number, the template is considered successfully applied, and child blocks are then appended.
+
+If necessary, you could do an even stricter comparison – for example, comparing block types, content, property values, etc. However, comparing top-level block count is likely all you need in most cases. 
+
+Notion provides a helpful `collectDataSourceTemplates` function in their SDK you can use for this. It's not necessary if your request provides an exact template ID, but you'll need it if your request uses "default" for the template.
+
+Note how the sample `verifyTemplateReady()` function will throw an error if any step in the validation process fails. `createPage()` will throw this error up the call stack, so you can decide how to handle it in your code. You may decide to stop execution of your own code, or just proceed with attempting to append blocks anyway (in which case the Notion API will throw an error if appending fails).
 
 ```javascript
-const result = await request.pages.create({
+import { createPage } from "notion-helper"
+import { collectDataSourceTemplates } from "@notionhq/client"
+
+// Sample verification helper function
+async function verifyTemplateReady({ 
+  template,
+  dataSourceId,
+  createdPageId, 
+  client, 
+  options = {} 
+}) {
+  const { 
+    maxRetries = 3, 
+    waitMs = 2000 
+  } = options;
+  
+  console.log('⏳ Verifying template content is ready...');
+  
+  // Validate template object
+  if (!template || typeof template !== 'object' || !template.hasOwnProperty('type')) {
+    throw new Error('Template verification failed: template object is invalid or missing required "type" property');
+  }
+  
+  // Determine template ID based on template type
+  let templateId;
+  
+  if (template.type === 'template_id') {
+    templateId = template.template_id;
+    if (!templateId) {
+      throw new Error('Template verification failed: Missing template_id for template.type "template_id"');
+    }
+    console.log(`   Using template_id: ${templateId}`);
+  } else if (template.type === 'default') {
+    console.log('   Fetching default template from data source...');
+    try {
+      const templates = await collectDataSourceTemplates(client, {
+        data_source_id: dataSourceId
+      });
+      const defaultTemplate = templates.find(t => t.is_default);
+      if (defaultTemplate) {
+        templateId = defaultTemplate.id;
+        if (!templateId) {
+          throw new Error('Template verification failed: Default template found but it has no id');
+        }
+        console.log(`   Found default template: ${defaultTemplate.name} (${templateId})`);
+      } else {
+        throw new Error('Template verification failed: No default template found in the provided data source');
+      }
+    } catch (error) {
+      throw new Error(`Template verification failed: Could not fetch templates (${error.message})`);
+    }
+  } else if (template.type === 'none') {
+    throw new Error('Template verification failed: Template type is "none", nothing to verify.');
+  } else {
+    throw new Error(`Template verification failed: Unknown template type "${template.type}"`);
+  }
+  
+  // Get template block count
+  let templateBlockCount;
+  try {
+    const templateBlocks = await client.blocks.children.list({
+      block_id: templateId,
+      page_size: 100 // Note: If your template has >100 top-level blocks, you'll need pagination here
+    });
+    templateBlockCount = templateBlocks.results.length;
+    console.log(`   Template has ${templateBlockCount} top-level blocks`);
+  } catch (error) {
+    throw new Error(`Template verification failed: Could not fetch template blocks (${error.message})`);
+  }
+  
+  // Verify created page has same structure (with retries)
+  let retries = 0;
+  let verified = false;
+  let currentBlockCount = 0;
+  
+  while (retries <= maxRetries && !verified) {
+    await new Promise(resolve => setTimeout(resolve, waitMs));
+    let pageBlocks;
+    try {
+      pageBlocks = await client.blocks.children.list({
+        block_id: createdPageId,
+        page_size: 100
+      });
+      currentBlockCount = pageBlocks.results.length;
+    } catch (error) {
+      throw new Error(`Template verification failed: Could not fetch page blocks for verification attempt ${retries + 1} (${error.message})`);
+    }
+    
+    console.log(`   Attempt ${retries + 1}/${maxRetries + 1}: Page has ${currentBlockCount} blocks`);
+    
+    if (currentBlockCount >= templateBlockCount) {
+      verified = true;
+      console.log('✓ Template content verified!');
+    } else {
+      retries++;
+    }
+  }
+  
+  if (!verified) {
+    throw new Error(
+      `Template verification failed after ${maxRetries + 1} attempts. ` +
+      `Expected at least ${templateBlockCount} blocks but found ${currentBlockCount}.`
+    );
+  }
+}
+
+// Use the verification callback
+const result = await createPage({
     data: templatePage.content,
     client: notion,
-    templateWaitMs: 2000,
-    onTemplatePageCreated: async ({ page }) => {
-        console.log(`Template page created: ${page.id}`);
+    templateWaitMs: 0, // Set to 0 since verification callback handles waiting
+    onTemplatePageCreated: async ({ page, template, fallbackWaitMs }) => {
+        console.log(`✓ Template page created: ${page.id}`);
+        console.log(`✓ Page URL: https://www.notion.so/${page.id.replace(/-/g, '')}`);
         
-        // Custom verification logic
-        const pageContent = await notion.blocks.children.list({
-            block_id: page.id
+        // Verify template is ready before appending children
+        await verifyTemplateReady({
+            template: template,
+            dataSourceId: data_source_id,
+            createdPageId: page.id,
+            client: notion,
+            options: {
+                maxRetries: 3,
+                waitMs: 2000
+            }
         });
-        
-        if (pageContent.results.length > 0) {
-            console.log('Template processing appears complete');
-        } else {
-            console.log('Template still processing...');
-        }
-        
-        // Access parent information if needed
-        console.log('Parent data source:', page.parent);
     }
 });
+
+console.log('✓ Page creation complete!');
+console.log('✓ Template verification passed!');
 ```
 
-### Method 3: Request-Level Manual Control (Advanced)
+### Method 3: Wait for a Webhook
 
-**Use this when `handleTemplatePageChildren: false` (default)**
+Rather than comparing against the template page's content, you can listen for a `page.content_updated` or `page.created` webhook.
+
+See the [Notion API guidance on this](https://developers.notion.com/docs/creating-pages-from-templates#webhook-setup) for more details.
+
+Note how their team still recommends retrieving block children from the created page when receiving a `page.created` event!
+
+### Method 4: Manual Control (Still using `createPage()`)
+
+The `createPage()` function has a `skipAutoAppendOnTemplate` that you can set to `true` if you want. When you do (and when a template object is present in the request), `createPage()` will not append block children at all. Instead, they are returned by the function within a `pendingChildren` property.
+
+This is very similar to the Builder-Level Control method described below, but is more suitable for applications already using `createPage()` to create pages.
 
 ```javascript
-const result = await request.pages.create({
+const result = await createPage({
     data: templatePage.content,
     client: notion,
     skipAutoAppendOnTemplate: true
@@ -160,7 +247,7 @@ if (result.pendingChildren && result.pendingChildren.length > 0) {
     await verifyTemplateReady(result.pageId);
     
     // Append children manually
-    await request.blocks.children.append({
+    await appendBlocks({
         block_id: result.pageId,
         children: result.pendingChildren,
         client: notion
@@ -168,57 +255,49 @@ if (result.pendingChildren && result.pendingChildren.length > 0) {
 }
 ```
 
-### Method 4: Builder-Level Manual Control (Full Control)
+## Creating Pages with Builder-Level Control (Manual Block Appending)
 
-**Use this when `handleTemplatePageChildren: true`**
+If you're only using Notion-Helper's fluent interface for building page objects, and you're not using `createPage()` to assist with page-creation, then you can handle templates at the builder level.
+
+This is conceptually much simpler that everything above. By setting `handleTemplatePageChildren: true`, all child blocks will moved to the `additionalBlocks` property in the return object of `createNotionBuilder()`, and any `children` property will be deleted from the created page object.
+
+If you do use this method, you may still find the `appendBlocks()` function useful for handling Notion's various request limits when appending the child blocks (e.g. nesting limits).
 
 ```javascript
+import { createNotionBuilder, createPage, appendBlocks } from "notion-helper"
+
 const builder = createNotionBuilder({ 
-    handleTemplatePageChildren: true 
+    limitChildren: false,
+    limitNesting: false,
+    handleTemplatePageChildren: true // ALL children go to additionalBlocks
 });
 
 const templatePage = builder
     .parentDataSource('your-data-source-id')
-    .template('default')
+    .template('your-template-id')
     .title('Name', 'Task from Template')
     .paragraph('This content will be in additionalBlocks')
     .toDo('Complete task', false)
     .build();
 
 // Create page first (no children in request)
-const notion = new Client({ auth: process.env.NOTION_TOKEN });
-const newPage = await notion.pages.create(templatePage.content);
+const result = await createPage({
+    data: templatePage.content,
+    client: notion,
+});
 
-// Wait for template processing (your custom logic)
-await waitForTemplateProcessing(newPage.id);
+const newPage = result.apiResponse; // This is the created Notion page object
 
 // Manually append blocks at your own pace
 if (templatePage.additionalBlocks && templatePage.additionalBlocks.length > 0) {
     for (const blockChunk of templatePage.additionalBlocks) {
-        await notion.blocks.children.append({
+        await appendBlocks({
             block_id: newPage.id,
             children: blockChunk
         });
     }
 }
 ```
-
-## Choosing Your Approach
-
-### When to Use Builder-Level Control (`handleTemplatePageChildren: true`)
-
-- **Complex template verification** - You need custom logic to verify template processing
-- **Batch operations** - Creating many pages and want to control timing precisely
-- **Webhook integration** - You're using webhooks to detect template completion
-- **Custom retry logic** - You need sophisticated error handling and retries
-- **Performance optimization** - You want to create pages first, then append blocks in batches
-
-### When to Use Request-Level Control (`handleTemplatePageChildren: false`)
-
-- **Simple use cases** - Most applications with straightforward template needs
-- **Quick prototyping** - You want to get started quickly with minimal setup
-- **Standard workflows** - Your template processing follows common patterns
-- **Less code** - You prefer the library to handle timing automatically
 
 ## Template Types
 
@@ -258,319 +337,96 @@ builder.template('none')
 
 Creates a page without any template.
 
-## Production Best Practices
+## Handling Default Templates Before Page Creation
 
-### 1. Webhook Integration (Most Reliable)
+**Important**: When using `template: 'default'`, the Notion API will fail with a 400 error if the data source doesn't have a default template set. It's a good idea to check your data source to see if it has a default template **before** sending the page-creation request.
 
-For production applications, register webhook handlers to detect when template processing is complete:
-
-```javascript
-// Set up webhook handler
-app.post('/notion-webhook', async (req, res) => {
-    const { type, data } = req.body;
-    
-    if (type === 'page.content_updated') {
-        // Template processing is complete
-        await handleTemplateReady(data.page_id);
-    }
-    
-    res.status(200).send('OK');
-});
-
-// Create page with webhook-based verification
-const result = await request.pages.create({
-    data: templatePage.content,
-    client: notion,
-    skipAutoAppendOnTemplate: true,
-    onTemplatePageCreated: async ({ page }) => {
-        // Store page ID for webhook processing
-        await storePendingPage(page.id);
-    }
-});
-```
-
-### 2. Template Content Verification
-
-For critical applications, compare created page content with expected template structure:
+Here's how to use `collectDataSourceTemplates()` from `@notionhq/client` to verify a default template exists, and gracefully fall back if it doesn't:
 
 ```javascript
-const result = await request.pages.create({
-    data: templatePage.content,
-    client: notion,
-    onTemplatePageCreated: async ({ page }) => {
-        // Fetch template content for comparison
-        const templateId = await getTemplateIdFromPage(page);
-        const templateBlocks = await notion.blocks.children.list({
-            block_id: templateId
-        });
-        
-        // Wait and verify template processing
-        let attempts = 0;
-        while (attempts < 10) {
-            const pageBlocks = await notion.blocks.children.list({
-                block_id: page.id
-            });
-            
-            if (pageBlocks.results.length >= templateBlocks.results.length) {
-                console.log('Template processing complete');
-                break;
-            }
-            
-            await new Promise(resolve => setTimeout(resolve, 1000));
-            attempts++;
-        }
-    }
-});
-```
+import { collectDataSourceTemplates } from "@notionhq/client";
 
-### 3. Error Handling
+// Check for default template before building page
+let pageBuilder = createNotionBuilder()
+    .parentDataSource(data_source_id);
 
-Always wrap template operations in proper error handling:
-
-```javascript
 try {
-    const result = await request.pages.create({
-        data: templatePage.content,
-        client: notion,
-        templateWaitMs: 5000,
-        onTemplatePageCreated: async ({ page }) => {
-            await verifyTemplateProcessing(page.id);
-        }
+    const templates = await collectDataSourceTemplates(notion, {
+        data_source_id: data_source_id
     });
     
-    console.log('Page created successfully:', result.apiResponse.id);
+    // Check if a default template exists
+    const hasDefault = templates.some(t => t.is_default);
+    
+    if (hasDefault) {
+        // Safe to use default template
+        pageBuilder = pageBuilder.template('default');
+        console.log('✓ Using default template');
+    } else {
+        // No default template - create page without template
+        console.log('⚠️ No default template found, creating page without template');
+    }
 } catch (error) {
-    console.error('Template page creation failed:', error);
-    
-    // Handle specific error cases
-    if (error.code === 'validation_error') {
-        console.error('Template validation failed - check template ID and permissions');
-    }
+    console.warn('Could not fetch templates, creating page without template:', error.message);
 }
-```
 
-## Configuration Options
-
-### templateWaitMs
-
-Controls how long to wait after page creation before appending children:
-
-```javascript
-// Short wait for simple templates
-templateWaitMs: 1000
-
-// Longer wait for complex templates
-templateWaitMs: 5000
-
-// No wait (use callback for verification)
-templateWaitMs: 0
-```
-
-### onTemplatePageCreated
-
-Callback function for custom verification logic:
-
-```javascript
-onTemplatePageCreated: async ({ page }) => {
-    // page.id - The created page ID
-    // page.parent - Parent data source/database info
-    // page.properties - Page properties
-    // Custom verification logic here
-}
-```
-
-### skipAutoAppendOnTemplate
-
-Returns children for manual appending instead of auto-appending:
-
-```javascript
-skipAutoAppendOnTemplate: true
-// Returns: { apiResponse, pendingChildren, pageId }
-```
-
-## Common Patterns
-
-### Batch Template Page Creation
-
-```javascript
-const templatePages = [
-    { title: 'Task 1', description: 'First task' },
-    { title: 'Task 2', description: 'Second task' },
-    { title: 'Task 3', description: 'Third task' }
-];
-
-const results = await Promise.all(
-    templatePages.map(async (pageData) => {
-        const page = builder
-            .parentDataSource('your-data-source-id')
-            .template('default')
-            .title('Name', pageData.title)
-            .richText('Description', pageData.description)
-            .build();
-            
-        return await request.pages.create({
-            data: page.content,
-            client: notion,
-            templateWaitMs: 2000
-        });
-    })
-);
-```
-
-### Template with Conditional Content
-
-```javascript
-const createTaskPage = (taskData) => {
-    const page = builder
-        .parentDataSource('your-data-source-id')
-        .template('default')
-        .title('Name', taskData.name)
-        .select('Priority', taskData.priority);
-        
-    // Add conditional content based on priority
-    if (taskData.priority === 'High') {
-        page.callout('High priority task - review immediately', '⚠️');
-    }
-    
-    return page.build();
-};
-```
-
-## Troubleshooting
-
-### Template Not Found
-
-```javascript
-// Check if template exists
-const templates = await notion.dataSources.templates.list({
-    data_source_id: 'your-data-source-id'
-});
-
-console.log('Available templates:', templates.templates);
-```
-
-### Template Processing Taking Too Long
-
-```javascript
-// Increase wait time or implement retry logic
-const result = await request.pages.create({
-    data: templatePage.content,
-    client: notion,
-    templateWaitMs: 10000, // 10 seconds
-    onTemplatePageCreated: async ({ page }) => {
-        // Implement retry logic
-        await retryTemplateVerification(page.id, 5);
-    }
-});
-```
-
-### Children Not Appending
-
-**For Builder-Level Control (`handleTemplatePageChildren: true`):**
-```javascript
-// Check that additionalBlocks exist and are being processed
-const templatePage = builder.build();
-console.log('Additional blocks:', templatePage.additionalBlocks);
-
-if (templatePage.additionalBlocks && templatePage.additionalBlocks.length > 0) {
-    // Make sure you're appending them manually
-    for (const blockChunk of templatePage.additionalBlocks) {
-        await notion.blocks.children.append({
-            block_id: newPage.id,
-            children: blockChunk
-        });
-    }
-}
-```
-
-**For Request-Level Control (`handleTemplatePageChildren: false`):**
-```javascript
-// Check that handleTemplatePageChildren is NOT enabled
-const builder = createNotionBuilder(); // Don't set handleTemplatePageChildren: true
-
-// Make sure you're using request.pages.create() with template parameters
-const result = await request.pages.create({
-    data: templatePage.content,
-    client: notion,
-    templateWaitMs: 3000 // Ensure wait time is sufficient
-});
-```
-
-## Migration from Non-Template Pages
-
-If you're migrating existing code to use templates:
-
-### For Simple Migrations (Request-Level Control)
-1. **Add template configuration** to your page creation calls
-2. **Test with simple templates** first
-3. **Implement proper error handling** for template-specific failures
-
-### For Complex Migrations (Builder-Level Control)
-1. **Enable `handleTemplatePageChildren: true`** in your builder
-2. **Update your page creation flow** to handle `additionalBlocks`
-3. **Implement custom template verification** logic
-4. **Consider webhook integration** for production reliability
-
-### Migration Example
-
-**Before (Non-template):**
-```javascript
-const page = builder
-    .parentDataSource('data-source-id')
-    .title('Name', 'Task')
-    .paragraph('Description')
+// Continue building your page...
+const page = pageBuilder
+    .title('Name', 'My Task')
+    .paragraph('This is a task description')
+    .toDo('Complete task', false)
     .build();
 
+// Create the page - templateWaitMs is only used if a template exists
 const result = await request.pages.create({
     data: page.content,
-    client: notion
+    client: notion,
+    templateWaitMs: 3000 // Only applied if template exists
 });
 ```
 
-**After (Request-Level Control):**
+**Alternative: Get explicit default template ID**
+
+For more control, fetch the default template ID and use it explicitly as a `template_id`:
+
 ```javascript
-const page = builder
-    .parentDataSource('data-source-id')
-    .template('default') // Add template
-    .title('Name', 'Task')
-    .paragraph('Description')
+let templateId = null;
+
+try {
+    const templates = await collectDataSourceTemplates(notion, {
+        data_source_id: data_source_id
+    });
+    
+    const defaultTemplate = templates.find(t => t.is_default);
+    
+    if (defaultTemplate) {
+        templateId = defaultTemplate.id;
+        console.log(`✓ Found default template: ${defaultTemplate.name}`);
+    } else {
+        console.log('⚠️ No default template found');
+    }
+} catch (error) {
+    console.warn('Could not fetch templates:', error.message);
+}
+
+// Build page with explicit template ID or no template
+const pageBuilder = createNotionBuilder()
+    .parentDataSource(data_source_id);
+
+if (templateId) {
+    pageBuilder.template(templateId); // Use explicit template ID
+} else {
+    console.log('Creating page without template');
+}
+
+const page = pageBuilder
+    .title('Name', 'My Task')
+    .paragraph('Task content')
     .build();
 
 const result = await request.pages.create({
     data: page.content,
     client: notion,
-    templateWaitMs: 3000 // Add template handling
+    templateWaitMs: 3000 // Only applied if template exists
 });
 ```
-
-**After (Builder-Level Control):**
-```javascript
-const builder = createNotionBuilder({ 
-    handleTemplatePageChildren: true 
-});
-
-const page = builder
-    .parentDataSource('data-source-id')
-    .template('default') // Add template
-    .title('Name', 'Task')
-    .paragraph('Description')
-    .build();
-
-// Handle additionalBlocks manually
-const newPage = await notion.pages.create(page.content);
-if (page.additionalBlocks && page.additionalBlocks.length > 0) {
-    for (const blockChunk of page.additionalBlocks) {
-        await notion.blocks.children.append({
-            block_id: newPage.id,
-            children: blockChunk
-        });
-    }
-}
-```
-
-Remember:
-
-- Templates require special handling for children blocks
-- Always verify template processing is complete before appending children
-- Use webhooks for the most reliable production setup
-- Test template operations thoroughly before deploying to production

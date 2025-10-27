@@ -5,9 +5,108 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [1.3.28] - 2025-10-27
 
 ### Added
+
+#### Debug Mode for API Requests
+- **New `debug` parameter in `request.pages.create()`**: Optional debug mode for detailed logging during page creation
+  - Logs page creation data (first 500 characters)
+  - Confirms successful page creation with page ID
+  - Tracks block append operations and API call counts
+  - Provides detailed chunk processing information
+  - Logs API call payload sizes and success confirmations
+
+```javascript
+// Enable debug mode for detailed logging
+const result = await request.pages.create({
+  data: pageData,
+  client: notion,
+  debug: true  // Enable detailed debug logging
+});
+```
+
+- **New `debug` parameter in `request.blocks.children.append()`**: Optional debug mode for detailed logging during block appending
+  - Logs number of children being appended
+  - Shows chunk creation and processing details
+  - Displays block depth and child array length information
+  - Tracks API call payloads and sizes
+  - Confirms API call success
+
+#### Table of Contents Block Support
+- **Added `table_of_contents` block type**: Support for Notion's table of contents block type
+  - Automatically recognized as a block type that doesn't require text content
+  - Consistent with other non-text block types like divider and column
+
+#### Page Parent Type Detection and Auto-Renaming
+- **Intelligent title property handling**: Automatic detection and renaming of title properties based on page parent type
+  - Tracks `parentIsDataSource` to distinguish between data source parents and page parents
+  - When a page has a page parent (not a data source), automatically detects non-standard title property names
+  - Automatically renames any property containing a `title` object to the standard "title" property name
+  - Provides console warnings when auto-renaming occurs to inform developers
+
+```javascript
+// Example: Automatic title property renaming for pages with page parents
+builder
+  .parentPage('page-id')
+  .richText('Name', 'My Page Title')  // Will be automatically renamed to 'title'
+  .paragraph('Content')
+  .build();
+
+// Console warning shown:
+// "[NotionBuilder] Non-standard title property "Name" found (expected "title" due to page having a parent type of Page rather than Data Source). Automatically renaming property "Name" to "title"."
+```
+
+### Changed
+
+#### Enhanced Template Children Handling
+- **Improved template page creation**: Enhanced handling of children property when using templates
+  - Now explicitly deletes the `children` property when templates are used
+  - Previously set to empty array, now completely removed for cleaner API requests
+  - Ensures better compliance with Notion API requirements for template-based page creation
+
+```javascript
+// When using templates, the children property is now completely removed from the request
+const result = await request.pages.create({
+  data: templatePage.content,  // children property deleted if template is used
+  client: notion
+});
+```
+
+#### Documentation Improvements
+- **Updated Factory Function Guide**: Comprehensive updates to `guides/Factory Function.md`
+  - Updated all references from deprecated `createNotion()` to `createNotionBuilder()`
+  - Replaced `dbId()` with recommended `parentDataSource()` throughout
+  - Added comprehensive configuration options section with all builder settings
+  - Added detailed template usage examples and manual control workflows
+  - Added complete key methods reference section
+  - Added integration with request API examples
+  - Expanded notes and best practices for production use
+  - Updated date examples to 2024
+  - Improved formatting and organization for better developer experience
+
+### Technical Details
+
+#### Debug Mode Implementation
+The new debug mode provides comprehensive logging at multiple stages:
+- **Page creation logging**: Logs the initial data payload (first 500 characters for readability)
+- **Success confirmation**: Logs the created page ID for verification
+- **Block processing**: Logs the number of blocks being appended
+- **Chunk management**: Logs chunk creation, size, and processing details
+- **Depth tracking**: Logs nested block depth and child array lengths
+- **Payload monitoring**: Logs API call payload sizes in bytes
+- **Completion tracking**: Confirms successful API calls
+
+This debug information is invaluable for troubleshooting complex page structures, large block hierarchies, and API integration issues.
+
+#### Parent Type Detection Logic
+The page parent type detection system:
+- Maintains `parentIsDataSource` boolean flag throughout the builder lifecycle
+- Checks parent type when building the final page structure
+- Only applies auto-renaming for page parents (not data source parents)
+- Scans all properties for objects containing a `title` key
+- Preserves existing "title" property if already present
+- Provides clear console warnings to help developers understand the automatic behavior
 
 #### Template Support for Page Creation
 - **New `template()` method in page builder**: Added support for setting data source templates when creating pages
@@ -47,9 +146,11 @@ const result = await request.pages.create({
 const result = await request.pages.create({
   data: templatePage.content,
   client: notion,
-  onTemplatePageCreated: async ({ page }) => {
+  onTemplatePageCreated: async ({ page, template, fallbackWaitMs }) => {
     console.log(`Template page created: ${page.id}`);
+    console.log(`Template used: ${template.type}`);
     // page.parent contains data_source_id or database_id if needed
+    // fallbackWaitMs provides the templateWaitMs value for custom timing
     // Custom verification logic here
   }
 });
@@ -114,17 +215,20 @@ if (result.additionalBlocks && result.additionalBlocks.length > 0) {
   - **Code examples**: Practical, copy-paste examples for all template scenarios
 
 #### Template Callback API Improvements
-- **Simplified callback signature**: Updated `onTemplatePageCreated` callback to receive `{ page }` instead of `{ page, pageId }`
+- **Enhanced callback signature**: Updated `onTemplatePageCreated` callback to receive `{ page, template, fallbackWaitMs }` instead of `{ page, pageId }`
   - Removes redundant `pageId` parameter since it's available as `page.id`
-  - Provides access to full page object including `page.parent` for template verification
-  - Maintains future extensibility with object-based parameter structure
+  - Adds `template` parameter providing access to the template object used to create the page
+  - Adds `fallbackWaitMs` parameter with the value of `templateWaitMs` for custom verification logic
+  - Enables more sophisticated template verification workflows
   - Updated all documentation and examples to reflect new signature
 
 ```javascript
 // Updated callback signature
-onTemplatePageCreated: async ({ page }) => {
+onTemplatePageCreated: async ({ page, template, fallbackWaitMs }) => {
   console.log(`Template page created: ${page.id}`);
+  console.log(`Template used: ${template.type}`);
   // page.parent contains data_source_id or database_id if needed
+  // Use fallbackWaitMs for custom verification timing
   // Custom verification logic here
 }
 ```
@@ -134,6 +238,9 @@ onTemplatePageCreated: async ({ page }) => {
   - `page_id.createMeta()` now validates against "UUID" type
   - `block_id.createMeta()` now validates against "UUID" type  
   - `property_id.createMeta()` now validates against "string" type
+- **Enhanced error messages**: All validation functions now include the actual passed value in error messages
+  - Improves debugging experience by showing exactly what value caused the validation failure
+  - Applies to all property types: numbers, strings, booleans, URLs, emails, phone numbers, and UUIDs
 
 ```javascript
 // Before:
@@ -141,7 +248,33 @@ createMeta: (page_id) => validateValue(page_id)
 
 // After:
 createMeta: (page_id) => validateValue(page_id, "UUID")
+
+// Enhanced error messages now show:
+// "Invalid UUID. Returning null. Passed value: invalid-id-string"
 ```
+
+#### Template Validation Improvements
+- **Case-insensitive template validation**: Template shortcuts now work regardless of case
+  - "NONE", "none", "None" all accepted for no template
+  - "DEFAULT", "default", "Default" all accepted for default template
+  - Improves developer experience and prevents common input errors
+
+```javascript
+// All these now work equivalently:
+builder.template("none")
+builder.template("NONE")  
+builder.template("None")
+
+builder.template("default")
+builder.template("DEFAULT")
+builder.template("Default")
+```
+
+#### Utility Function Export
+- **New `isValidUUID` export**: Exported `isValidUUID` utility function from the main library
+  - Can be used independently for UUID validation
+  - Useful for custom validation logic outside of the builder pattern
+  - Provides consistent UUID validation across the library
 
 #### URL Processing Utility
 - **New `extractNotionPageId()` function**: Utility for extracting Notion page IDs from URLs
@@ -221,8 +354,10 @@ const result = await request.pages.create({
   data: templatePage.content,
   client: notion,
   templateWaitMs: 5000, // Longer wait for complex templates
-  onTemplatePageCreated: async ({ page }) => {
+  onTemplatePageCreated: async ({ page, template, fallbackWaitMs }) => {
     // Custom verification logic
+    console.log(`Using template: ${template.type}`);
+    
     const pageContent = await notion.blocks.children.list({
       block_id: page.id
     });
@@ -231,6 +366,7 @@ const result = await request.pages.create({
       console.log('Template processing appears complete');
     } else {
       console.log('Template still processing...');
+      // fallbackWaitMs can be used for custom retry logic
     }
   }
 });
@@ -266,6 +402,12 @@ None in this release.
 
 ### Migration Guide
 No migration required. All changes are additive and backward compatible.
+
+---
+
+## [Unreleased]
+
+*Future changes will be documented here.*
 
 ---
 

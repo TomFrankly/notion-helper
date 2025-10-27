@@ -81,7 +81,7 @@ export const request = {
          * @param {Function} [options.getPage=(response) => response] - A function to extract the page data from the API response. If you're passing a custom apiCall function, you should pass a getPage function as well.
          * @param {Function} [options.getResults=(response) => response.results] - A function to extract results from the API response when appending blocks. Enables the append() method to append all child blocks in the request. If you're passing a custom apiCall function, you should pass a getResults function as well.
          * @param {number} [options.templateWaitMs=3000] - Milliseconds to wait after page creation when using templates, before appending children. This allows time for Notion's template processing to complete.
-         * @param {Function} [options.onTemplatePageCreated] - Optional callback function called after page creation but before appending children when using templates. Receives `{ page }` as parameter, where page is the created Notion page object. Can throw an error to stop execution and prevent children appending.
+         * @param {Function} [options.onTemplatePageCreated] - Optional callback function called after page creation but before appending children when using templates. Receives `{ page, template, fallbackWaitMs }` as parameter, where page is the created Notion page object, template is the template object used to create the page, and fallbackWaitMs is the value of templateWaitMs. Can throw an error to stop execution and prevent children appending. Alternatively, you can pass a number to templateWaitMs, which the callback can use in case it fails to directly verify the template is ready.
          * @param {boolean} [options.skipAutoAppendOnTemplate=false] - If true, returns children to caller instead of auto-appending them when using templates. Useful for manual control over template verification.
          * @returns {Promise<Object>} An object containing the API response for page creation and, if applicable, the result of appending children. When `skipAutoAppendOnTemplate` is true and templates are used, returns `{ apiResponse, pendingChildren, pageId }` instead.
          * @throws {Error} If no parent is provided or if there's an error during page creation or block appending.
@@ -176,6 +176,7 @@ export const request = {
             templateWaitMs = 3000,
             onTemplatePageCreated,
             skipAutoAppendOnTemplate = false,
+            debug = false,
         }) => {
             if (!data.parent) {
                 const error = `No parent page or database provided. Page cannot be created.`;
@@ -191,7 +192,11 @@ export const request = {
                 pageChildren = [...data.children];
                 data.children = [];
 
-                if (!isUsingTemplate) {
+                if (isUsingTemplate) {
+
+                    delete data.children;
+
+                } else {
                     
                     const hasNestedChildren = (block) => {
                         if (!block[block.type]?.children?.length) return false;
@@ -269,7 +274,15 @@ export const request = {
             }
 
             try {
+                if (debug) {
+                    console.log('\n[DEBUG] Creating page with data:', JSON.stringify(data, null, 2).substring(0, 500) + '...');
+                }
+                
                 const response = await callingFunction(data);
+                
+                if (debug) {
+                    console.log('[DEBUG] Page created successfully:', response?.id || 'No ID in response');
+                }
 
                 let createdPage;
 
@@ -277,23 +290,18 @@ export const request = {
                     createdPage = getPage(response);
                 }
 
-                // Handle template-specific logic
                 if (createdPage && isUsingTemplate) {
-                    // Call user callback if provided
-                    if (typeof onTemplatePageCreated === 'function') {
-                        await onTemplatePageCreated({ page: createdPage });
-                    }
                     
-                    // Wait for template processing
-                    if (templateWaitMs > 0) {
+                    if (typeof onTemplatePageCreated === 'function') {
+                        await onTemplatePageCreated({ page: createdPage, template: data.template, fallbackWaitMs: templateWaitMs });
+                    } else if (templateWaitMs > 0) {
                         await new Promise(resolve => setTimeout(resolve, templateWaitMs));
                     }
 
-                    // Handle skipAutoAppendOnTemplate option
                     if (skipAutoAppendOnTemplate && pageChildren && pageChildren.length > 0) {
                         return {
                             apiResponse: response,
-                            pendingChildren: pageChildren, // Return children for manual appending
+                            pendingChildren: pageChildren,
                             pageId: createdPage.id
                         };
                     }
@@ -301,6 +309,10 @@ export const request = {
 
                 if (createdPage && pageChildren && pageChildren.length > 0) {
                     try {
+                        if (debug) {
+                            console.log(`[DEBUG] Appending ${pageChildren.length} blocks to page ${createdPage.id}`);
+                        }
+                        
                         const appendedBlocks =
                             await request.blocks.children.append({
                                 block_id: createdPage.id,
@@ -308,7 +320,12 @@ export const request = {
                                 client,
                                 apiCall,
                                 getResults,
+                                debug,
                             });
+                            
+                        if (debug) {
+                            console.log(`[DEBUG] Block append completed. API calls made: ${appendedBlocks?.apiCallCount || 0}`);
+                        }
 
                         return {
                             apiResponse: response,
@@ -459,6 +476,7 @@ export const request = {
                     client,
                     apiCall,
                     getResults = (response) => response.results,
+                    debug = false,
                 }) {
                     if (!children || children.length < 1) {
                         console.warn(
@@ -470,8 +488,15 @@ export const request = {
                     let allResponses = [];
 
                     try {
+                        if (debug) {
+                            console.log(`\n[DEBUG] appendInternal called with ${children.length} children for block ${block_id}`);
+                        }
                         
                         const chunks = createSlices(children)
+                        
+                        if (debug) {
+                            console.log(`[DEBUG] Created ${chunks.length} chunks from ${children.length} children`);
+                        }
                         
                         for (let chunk of chunks) {
 
@@ -485,6 +510,10 @@ export const request = {
 
                             const maxDepthLimit = CONSTANTS.MAX_CHILD_ARRAY_DEPTH
                             const maxDepth = getDepth(chunk)
+                            
+                            if (debug) {
+                                console.log(`[DEBUG] Processing chunk with ${chunk.length} blocks (depth: ${maxDepth}, child array length: ${maxChildArrayLength})`);
+                            }
                             
                             /* Currently, a column_list block is a "special type" and cannot have its children recursively applied
                             in future calls. */
@@ -587,10 +616,20 @@ export const request = {
                                 throw new Error(error);
                             }
 
+                            if (debug) {
+                                console.log(`[DEBUG] Making API call to append ${chunk.length} blocks to block ${block_id}`);
+                                console.log(`[DEBUG] Chunk payload size: ${JSON.stringify(chunk).length} bytes`);
+                            }
+                            
                             const response = await callingFunction(
                                 block_id,
                                 chunk
                             );
+                            
+                            if (debug) {
+                                console.log(`[DEBUG] API call successful`);
+                            }
+                            
                             if (response) {
                                 allResponses.push(response);
                                 const results = getResults(response);
@@ -610,6 +649,7 @@ export const request = {
                                                     client,
                                                     apiCall,
                                                     getResults,
+                                                    debug,
                                                 });
 
                                             if (nestedResponses) {
@@ -692,7 +732,7 @@ export const request = {
  * @param {Function} [options.getPage] - A function to extract the page data from the API response. Defaults to (response) => response.
  * @param {Function} [options.getResults] - A function to extract results from the API response when appending blocks. Defaults to (response) => response.results.
  * @param {number} [options.templateWaitMs=3000] - Milliseconds to wait after page creation when using templates, before appending children.
- * @param {Function} [options.onTemplatePageCreated] - Optional callback function called after page creation but before appending children when using templates. Receives `{ page }` as parameter.
+ * @param {Function} [options.onTemplatePageCreated] - Optional callback function called after page creation but before appending children when using templates. Receives `{ page, template, fallbackWaitMs }` as parameter, where page is the created Notion page object, template is the template object used to create the page, and fallbackWaitMs is the value of templateWaitMs. Can throw an error to stop execution and prevent children appending. Alternatively, you can pass a number to templateWaitMs, which the callback can use in case it fails to directly verify the template is ready.
  * @param {boolean} [options.skipAutoAppendOnTemplate=false] - If true, returns children to caller instead of auto-appending them when using templates.
  * @returns {Promise<Object>} An object containing the API response for page creation and, if applicable, the result of appending children. When `skipAutoAppendOnTemplate` is true and templates are used, returns `{ apiResponse, pendingChildren, pageId }` instead.
  * @throws {Error} If no parent is provided or if there's an error during page creation or block appending.

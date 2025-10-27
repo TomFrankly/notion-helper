@@ -347,6 +347,7 @@ export function createNotionBuilder({
         currentBlockStack,
         nestingLevel,
         hasPageParent,
+        parentIsDataSource,
         hasPageId,
         hasBlockId,
         hasProperty,
@@ -365,6 +366,7 @@ export function createNotionBuilder({
         currentBlockStack = [{ block: data, children: data.children }];
         nestingLevel = 0;
         hasPageParent = false;
+        parentIsDataSource = false;
         hasProperty = false;
         hasBlock = false;
         nullParent = false;
@@ -427,6 +429,7 @@ export function createNotionBuilder({
                 type: "database_id",
             });
             hasPageParent = true;
+            parentIsDataSource = true;
             return this;
         },
 
@@ -450,6 +453,7 @@ export function createNotionBuilder({
                 type: "data_source_id" 
             });
             hasPageParent = true;
+            parentIsDataSource = true;
             return this;
         },
 
@@ -471,7 +475,7 @@ export function createNotionBuilder({
             data.parent = page_meta.parent.createMeta({
                 id: page_id,
                 type: "page_id",
-            });
+            }); 
             hasPageParent = true;
             return this;
         },
@@ -929,6 +933,7 @@ export function createNotionBuilder({
                 "column",
                 "divider",
                 "table",
+                "table_of_contents",
             ];
 
             if (
@@ -1495,11 +1500,34 @@ export function createNotionBuilder({
                 if (data.children && data.children.length > 0) {
                     const chunkedBlocks = chunkBlocks(data.children);
                     result.additionalBlocks = chunkedBlocks;
-                    data.children = [];
+                    delete data.children;
                 }
             }
 
             if (hasPageParent) {
+                
+                if (!parentIsDataSource) {
+                    
+                    if (data.properties) {
+                        
+                        for (const key in data.properties) {
+                            
+                            if (
+                                data.properties[key] &&
+                                typeof data.properties[key] === "object" &&
+                                "title" in data.properties[key] &&
+                                key !== "title"
+                            ) {
+                                console.warn(`[NotionBuilder] Non-standard title property "${key}" found (expected "title" due to page having a parent type of Page rather than Data Source). Automatically renaming property "${key}" to "title".`);
+                                
+                                data.properties["title"] = data.properties[key];
+                                delete data.properties[key];
+                                break;
+                            }
+                        }
+                    }
+                }
+                
                 if (
                     limitChildren === true &&
                     data.children.length > CONSTANTS.MAX_BLOCKS

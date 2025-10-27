@@ -165,9 +165,9 @@ export const page_meta = {
             }
             
             if (typeof templateChoice === "string") {
-                if (templateChoice === "none") {
+                if (templateChoice.toLowerCase() === "none") {
                     return null;
-                } else if (templateChoice === "default") {
+                } else if (templateChoice.toLowerCase() === "default") {
                     return { type: "default" };
                 } else if (isValidUUID(templateChoice)) {
                     return { type: "template_id", template_id: templateChoice };
@@ -991,7 +991,7 @@ function validateValue(value, type) {
         typeof type !== "string"
     ) {
         console.error(
-            `Invalid value or type variable provided to validateValue().`
+            `Invalid value or type variable provided to validateValue(). Passed value: ${value}`
         );
         throw new Error(
             `Invalid value or type variable provided to validateValue().`
@@ -1005,7 +1005,7 @@ function validateValue(value, type) {
     if (type === "number") {
         if (typeof value === "string") {
             console.warn(
-                `String data passed to a number property. Attempting to convert to a number.`
+                `String data passed to a number property. Attempting to convert to a number. Passed value: ${value}`
             );
             const num = Number(value);
 
@@ -1018,7 +1018,7 @@ function validateValue(value, type) {
 
         if (typeof value !== "number") {
             console.warn(
-                `Invalid data type passed to a number property. Returning null.`
+                `Invalid data type passed to a number property. Returning null. Passed value: ${value}`
             );
             return null;
         }
@@ -1029,7 +1029,7 @@ function validateValue(value, type) {
     if (type === "boolean") {
         if (typeof value !== "boolean") {
             console.warn(
-                `Invalid data type passed to a boolean property. Returning null.`
+                `Invalid data type passed to a boolean property. Returning null. Passed value: ${value}`
             );
             return null;
         }
@@ -1044,7 +1044,7 @@ function validateValue(value, type) {
     if (type === "string") {
         if (typeof value !== "string") {
             console.warn(
-                `Invalid data type passed to a string property. Returning null.`
+                `Invalid data type passed to a string property. Returning null. Passed value: ${value}`
             );
             return null;
         }
@@ -1055,7 +1055,7 @@ function validateValue(value, type) {
     if (type === "url") {
         if (typeof value !== "string") {
             console.warn(
-                `Invalid data type passed to a url property. Returning null.`
+                `Invalid data type passed to a url property. Returning null. Passed value: ${value}`
             );
             return null;
         }
@@ -1063,7 +1063,7 @@ function validateValue(value, type) {
         if (isValidURL(value)) {
             return value;
         } else {
-            console.warn(`Invalid URL. Returning null.`);
+            console.warn(`Invalid URL. Returning null. Passed value: ${value}`);
             return null;
         }
     }
@@ -1071,7 +1071,7 @@ function validateValue(value, type) {
     if (type === "email") {
         if (typeof value !== "string") {
             console.warn(
-                `Invalid data type passed to a email property. Returning null.`
+                `Invalid data type passed to a email property. Returning null. Passed value: ${value}`
             );
             return null;
         }
@@ -1083,7 +1083,7 @@ function validateValue(value, type) {
     if (type === "phone_number") {
         if (typeof value !== "string") {
             console.warn(
-                `Invalid data type passed to a phone number property. Returning null.`
+                `Invalid data type passed to a phone number property. Returning null. Passed value: ${value}`
             );
             return null;
         }
@@ -1096,7 +1096,7 @@ function validateValue(value, type) {
         if (isValidUUID(value)) {
             return value;
         } else {
-            console.warn(`Invalid UUID. Returning null.`);
+            console.warn(`Invalid UUID. Returning null. Passed value: ${value}`);
             return null;
         }
     }
