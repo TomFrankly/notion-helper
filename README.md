@@ -545,7 +545,7 @@ const page = createNotionBuilder()
 
 Result: 
 
-![Mandatory Fun Tracklist](https://thomasjfrank.com/wp-content/uploads/2025/11/mandatory-fun-page.jpeg)
+![Mandatory Fun Tracklist](https://thomasjfrank.com/wp-content/uploads/2025/11/Mandatory-Fun-Table.jpg)
 
 The `addExistingBlock()` method lets you add an existing, properly-formatted blocks to the builder. It's useful if you have code, or another library (e.g. [Martian](https://github.com/tryfabric/martian), the markdown-to-Notion converter), that already creates Notion blocks.
 
