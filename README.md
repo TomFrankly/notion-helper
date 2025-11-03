@@ -818,9 +818,9 @@ Here's a table listing all avaible block methods, along with their shorthand ali
 | `block.divider.createBlock()` | `divider()` | [Divider](https://developers.notion.com/reference/block#divider) |
 | `block.embed.createBlock()` | `embed()` | [Embed](https://developers.notion.com/reference/block#embed) |
 | `block.file.createBlock()` | `file()` | [File](https://developers.notion.com/reference/block#file) |
-| `block.heading_1.createBlock()` | `heading1()` | [Heading 1](https://developers.notion.com/reference/block#heading-1) |
-| `block.heading_2.createBlock()` | `heading2()` | [Heading 2](https://developers.notion.com/reference/block#heading-2) |
-| `block.heading_3.createBlock()` | `heading3()` | [Heading 3](https://developers.notion.com/reference/block#heading-3) |
+| `block.heading_1.createBlock()` | `heading1()` | [Heading 1](https://developers.notion.com/reference/block#headings) |
+| `block.heading_2.createBlock()` | `heading2()` | [Heading 2](https://developers.notion.com/reference/block#headings) |
+| `block.heading_3.createBlock()` | `heading3()` | [Heading 3](https://developers.notion.com/reference/block#headings) |
 | `block.image.createBlock()` | `image()` | [Image](https://developers.notion.com/reference/block#image) |
 | `block.numbered_list_item.createBlock()` | `numberedListItem()` or `num()` | [Numbered list item](https://developers.notion.com/reference/block#numbered-list-item) |
 | `block.paragraph.createBlock()` | `paragraph()` | [Paragraph](https://developers.notion.com/reference/block#paragraph) |
