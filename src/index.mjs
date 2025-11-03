@@ -1,9 +1,10 @@
-import { buildRichTextObj } from "./rich-text.mjs";
+import { buildRichTextObj, mentionUser, mentionDate, mentionDatabase, mentionPage } from "./rich-text.mjs";
 import {
     audio,
     block,
     makeParagraphBlocks,
     bookmark,
+    breadcrumb,
     bulletedListItem,
     bullet,
     callout,
@@ -37,6 +38,10 @@ import { getDepth, getLongestArray, getTotalCount, getPayloadSize, validateAndSp
 
 export {
     buildRichTextObj,
+    mentionUser,
+    mentionDate,
+    mentionDatabase,
+    mentionPage,
     makeParagraphBlocks,
     block,
     request,
@@ -74,6 +79,7 @@ export {
     url,
     audio,
     bookmark,
+    breadcrumb,
     bulletedListItem,
     bullet,
     callout,
@@ -109,6 +115,10 @@ export {
 
 const NotionHelper = {
     buildRichTextObj,
+    mentionUser,
+    mentionDate,
+    mentionDatabase,
+    mentionPage,
     makeParagraphBlocks,
     block,
     request,
@@ -146,6 +156,7 @@ const NotionHelper = {
     url,
     audio,
     bookmark,
+    breadcrumb,
     bulletedListItem,
     bullet,
     callout,

@@ -329,7 +329,7 @@ export const block = {
          * Creates a code block.
          *
          * @function
-         * @param {string|Object} options - A string representing the code content, or an options object.
+         * @param {string|string[]|Object} options - A string or array of strings representing the code content, or an options object.
          * @param {string|string[]|Array<Object>} [options.rich_text=[]] - The code content as a string, an array of strings, or an array of rich text objects.
          * @param {string|string[]|Array<Object>} [options.caption=[]] - The caption as a string, an array of strings, or an array of rich text objects.
          * @param {string} [options.language="plain text"] - Programming language of the code block.
@@ -337,6 +337,12 @@ export const block = {
          * @example
          * // Use with a string
          * const simpleCode = block.code.createBlock("console.log('Give me all the bacon and eggs you have.');");
+         *
+         * // Use with an array of strings (multi-line snippet)
+         * const multiLineCode = block.code.createBlock([
+         *   "let counter = 0;",
+         *   "counter += 1;"
+         * ]);
          *
          * // Use with options object
          * const complexCode = block.code.createBlock({
@@ -347,7 +353,7 @@ export const block = {
          */
         createBlock: (options) => {
             let rich_text, caption, language;
-            if (typeof options === "string") {
+            if (typeof options === "string" || Array.isArray(options)) {
                 rich_text = options;
                 caption = [];
                 language = "plain text";
@@ -1316,10 +1322,11 @@ export const block = {
          * Creates a table block.
          *
          * @function
-         * @param {Object} [options] - Options for creating the table. If undefined, creates an empty table.
+         * @param {Object|number} [options] - Options for creating the table. Provide a number to set table_width directly, or an options object.
          * @param {boolean} [options.has_column_header=false] - Whether the table has a column header.
          * @param {boolean} [options.has_row_header=false] - Whether the table has a row header.
-         * @param {Array<Array<string>>|Array<Object>} [options.rows=[]] - An array of rows. Each row can be an array of strings or a table_row object.
+         * @param {Array<Array<string|number|Object>>|Array<Object>} [options.rows=[]] - An array of rows. Each row can be an array (strings/numbers/rich-text objects) or a table_row block.
+         * @param {number} [options.table_width] - Explicit table width. When rows are supplied, the first row's cell count is used instead.
          * @returns {Object} A table block object compatible with Notion's API.
          * @example
          * // Use with array of string arrays
@@ -1345,31 +1352,63 @@ export const block = {
          * });
          *
          * @example
-         * // Create an empty table
-         * const emptyTable = block.table.createBlock();
+         * // Use with explicit table_width (empty table)
+         * // Note: Notion API will reject requests that attempt to create a table
+         * // without at least one row
+         * const emptyTable = block.table.createBlock(3);
+         *
+         * @example
+         * // Use with explicit table_width in options object
+         * // Note: Notion API will reject requests that attempt to create a table
+         * // without at least one row
+         * const tableWithWidth = block.table.createBlock({
+         *   table_width: 4,
+         *   has_column_header: true
+         * });
          */
         createBlock: (options) => {
-            let has_column_header, has_row_header, rows;
+            let has_column_header = false;
+            let has_row_header = false;
+            let rows = [];
+            let table_width;
 
-            if (typeof options === "object") {
+            if (options && typeof options === "object" && !Array.isArray(options)) {
                 ({
                     has_column_header = false,
                     has_row_header = false,
                     rows = [],
+                    table_width,
                 } = options);
-            } else {
-                has_column_header = false;
-                has_row_header = false;
-                rows = [];
+            } else if (typeof options === "number") {
+                table_width = options;
             }
 
             const children = rows.map((row) =>
                 Array.isArray(row) ? block.table_row.createBlock(row) : row
             );
+
+            let derivedWidth;
+            if (children.length > 0) {
+                const firstRowBlock = children[0];
+                if (firstRowBlock?.table_row?.cells) {
+                    derivedWidth = firstRowBlock.table_row.cells.length;
+                } else if (Array.isArray(rows[0])) {
+                    derivedWidth = rows[0].length;
+                }
+
+                if (table_width !== undefined && table_width !== derivedWidth) {
+                    console.warn(
+                        `[NotionHelper] Supplied table_width (${table_width}) does not match first row width (${derivedWidth}). Using first row width.`
+                    );
+                }
+            }
+
+            const finalWidth = derivedWidth ?? table_width ?? 0;
+
             return {
                 type: "table",
                 table: {
-                    table_width: children[0].table_row.cells.length,
+                    table_width: finalWidth,
                     has_column_header: has_column_header,
                     has_row_header: has_row_header,
                     children: children,
@@ -1692,6 +1731,17 @@ export function bookmark(options) {
 }
 
 /**
+ * Creates a breadcrumb block.
+ * @memberof BlockShorthand
+ * @see block.breadcrumb for full documentation
+ * @returns {Object} A breadcrumb block.
+ */
+export function breadcrumb() {
+    return block.breadcrumb.createBlock();
+}
+
+
+/**
  * Creates a bulleted list item block.
  * @memberof BlockShorthand
  * @param {string|string[]|Object} options - A string, an array of strings, or an options object representing the list item content.
@@ -1727,7 +1777,7 @@ export function callout(options) {
 /**
  * Creates a code block.
  * @memberof BlockShorthand
- * @param {string|Object} options - A string representing the code content, or an options object.
+ * @param {string|string[]|Object} options - A string or array of strings representing the code content, or an options object.
  * @see block.code for full documentation
  * @returns {Object} A code block.
  */

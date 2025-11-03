@@ -5,6 +5,204 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.29] - 2025-11-03
+
+### Added
+
+#### Custom API Call Options Object Support
+- **Enhanced `apiCall` callback signature**: Custom API call functions now receive options objects instead of positional arguments
+  - Page creation: `apiCall({ type: 'create_page', data })`
+  - Block append: `apiCall({ type: 'append_blocks', data: { block_id, children, after } })`
+  - Consistent `data` property for both operations
+  - Enables single callback function to handle both operations via `type` routing
+  - Backward compatibility maintained for existing implementations via automatic detection and fallback
+  - More extensible for future API operations
+- **Unified callback pattern**: Developers can now use a single `apiCall` function for both page creation and block appending operations
+
+```javascript
+// Unified callback function for all operations
+const apiCall = async ({ type, data }) => {
+  if (type === 'create_page') {
+    return await ky.post('https://api.notion.com/v1/pages', {
+      json: data,
+      headers: {
+        'Authorization': `Bearer ${NOTION_TOKEN}`,
+        'Notion-Version': '2025-09-03',
+      },
+    }).json();
+  } else if (type === 'append_blocks') {
+    const { block_id, children, after } = data;
+    return await ky.patch(
+      `https://api.notion.com/v1/blocks/${block_id}/children`,
+      {
+        json: { children, ...(after && { after }) },
+        headers: {
+          'Authorization': `Bearer ${NOTION_TOKEN}`,
+          'Notion-Version': '2025-09-03',
+        },
+      }
+    ).json();
+  }
+};
+
+// Use the same callback for both operations
+const pageResult = await createPage({ data: page.content, apiCall });
+const blockResult = await appendBlocks({ block_id, children, apiCall });
+```
+
+#### "After" Parameter Support for Block Append Operations
+- **New `after` parameter in `request.blocks.children.append()`**: Support for inserting blocks after a specific block using Notion's `after` parameter
+  - Allows appending blocks after a specific block ID
+  - Automatically chains chunks when `after` is provided, ensuring sequential block insertion
+  - Passes `after` parameter only when explicitly provided (not null/undefined)
+  - Updates `currentAfter` to the last created block's ID when chaining multiple chunks
+  - Maintains block order across multiple API calls for large block arrays
+
+```javascript
+// Append blocks after a specific block
+const { apiResponses, apiCallCount } = await request.blocks.children.append({
+  block_id: 'your-block-id',
+  after: 'existing-block-id',  // Insert after this block
+  children: childBlocks.content,
+  client: notion
+});
+
+// When chaining multiple chunks with after parameter,
+// each chunk is automatically inserted after the previous chunk's last block
+const { apiResponses } = await request.blocks.children.append({
+  block_id: 'your-page-id',
+  after: 'target-block-id',
+  children: largeBlockArray,  // Will be split into chunks
+  client: notion
+  // Chunk 1 inserted after 'target-block-id'
+  // Chunk 2 inserted after chunk 1's last block
+  // Chunk 3 inserted after chunk 2's last block
+  // And so on...
+});
+```
+
+### Changed
+
+#### Comprehensive README Rewrite and Expansion
+- **Complete README overhaul**: Fully rewritten and significantly expanded README documentation
+  - **Enhanced organization**: Restructured content with clear sections and improved navigation
+  - **Comprehensive block documentation**: Added detailed documentation sections for all block types with extensive code examples
+  - **Better examples**: Added practical, copy-paste-ready examples for every block type and method
+  - **Improved clarity**: Enhanced explanations and descriptions throughout the documentation
+  - **Better formatting**: Improved code examples, clearer structure, and enhanced readability
+
+#### Block Type Documentation Improvements
+- **Comprehensive block type sections**: Added or significantly expanded documentation for all block types:
+  - **Audio blocks**: Complete examples showing URL strings, options objects, and caption variations
+  - **Bookmark blocks**: Examples with URLs, captions (string, array, and rich text formats)
+  - **Breadcrumb blocks**: Clear usage examples
+  - **Bulleted List Item blocks**: Comprehensive examples with strings, arrays, formatting, colors, and nested children
+  - **Callout blocks**: Examples showing emoji/icons, rich text, and formatting options
+  - **Code blocks**: Examples demonstrating language specification and code formatting
+  - **Column and Column List blocks**: Clear examples of column structures and nesting
+  - **Divider blocks**: Simple and clear usage examples
+  - **Embed blocks**: Examples with URLs and captions
+  - **File blocks**: Documentation for URL strings, file upload IDs, and caption options
+  - **Heading blocks** (1, 2, 3): Examples showing string inputs, rich text formatting, colors, and toggle functionality
+  - **Image blocks**: Comprehensive examples with URLs, captions, and file upload support
+  - **Numbered List Item blocks**: Examples with strings, arrays, formatting, and nested children
+  - **Paragraph blocks**: Detailed examples showing string inputs, arrays, rich text objects, formatting, colors, and nested children
+  - **PDF blocks**: Examples with external URLs, captions (string, array, rich text), and file upload IDs
+  - **Quote blocks**: Examples with strings, formatting, colors, and nested children
+  - **Table blocks**: Comprehensive examples showing table creation, column configuration, and row data
+  - **Table Row blocks**: Examples demonstrating row data formats
+  - **Table of Contents blocks**: Clear usage examples
+  - **To Do blocks**: Examples showing checked/unchecked states, formatting, and nested children
+  - **Toggle blocks**: Examples with strings, formatting, colors, and nested children
+  - **Video blocks**: Examples with URLs, captions, and various formats
+
+#### Page Property Documentation Enhancements
+- **Expanded property method documentation**: Added comprehensive examples for all page property types:
+  - **Title property**: Examples showing various input formats
+  - **Rich Text property**: Examples with strings, arrays, rich text objects, and formatting
+  - **Checkbox property**: Clear boolean value examples
+  - **Date property**: Examples showing single dates, date ranges, and timezone handling
+  - **Email property**: Simple email format examples
+  - **Files & Media property**: Examples with single files, arrays, and file upload support
+  - **Multi-select property**: Examples showing array inputs and options
+  - **Number property**: Examples with various numeric formats
+  - **People property**: Examples with user ID arrays
+  - **Phone Number property**: Examples with formatted phone numbers
+  - **Relation property**: Examples showing page ID arrays for relation properties
+  - **Select property**: Examples with option strings
+  - **Status property**: Examples with status option strings
+  - **URL property**: Examples with URL strings
+
+#### Page Meta Documentation Improvements
+- **Enhanced parent documentation**: Expanded documentation for parent types:
+  - **Data Source parent**: Clear examples using `parentDataSource()` method
+  - **Page parent**: Examples using `parentPage()` method
+  - **Database parent** (deprecated): Noted deprecation and migration guidance
+- **Improved meta method documentation**: Better examples for:
+  - **Page ID**: Examples for referencing existing pages
+  - **Block ID**: Examples for referencing existing blocks
+  - **Property ID**: Examples for referencing existing properties
+  - **Icon**: Examples with emoji strings and URL strings
+  - **Cover**: Examples with URL strings for page covers
+  - **Template**: Comprehensive examples showing template usage with shortcuts and full objects
+
+#### Fluent Interface Documentation Expansion
+- **Enhanced builder pattern examples**: Added more comprehensive examples for the fluent interface
+  - **Method chaining examples**: Clear demonstrations of chaining multiple methods
+  - **Nested block examples**: Examples showing complex nested structures
+  - **Loop method examples**: Comprehensive examples using `loop()` for array processing
+  - **Template integration examples**: Examples showing template usage with builders
+  - **Complete workflow examples**: End-to-end examples showing full page creation workflows
+
+#### Installation and Setup Documentation
+- **Enhanced installation section**: Improved instructions for:
+  - **Node.js installation**: Clear npm installation steps
+  - **Browser usage**: Expanded browser usage documentation with examples and CORS guidance
+  - **TypeScript support**: Clear explanation of TypeScript support and type definitions
+- **Better import examples**: Comprehensive examples showing different import patterns
+
+#### API Request Handling Documentation
+- **Expanded large request handling**: Enhanced documentation covering:
+  - **Payload size limits**: Clear explanation of 500KB payload limit
+  - **Block count limits**: Documentation of 1,000 block limit per request
+  - **Automatic chunking**: Clear explanation of how Notion Helper handles large requests
+  - **Alternative HTTP clients**: Examples showing custom API call functions
+  - **Request orchestration**: Examples using `request.pages.create()` and `request.blocks.children.append()`
+
+#### Developer Experience Improvements
+- **Better code examples**: All examples are now copy-paste ready and tested
+- **Consistent formatting**: Unified code example formatting throughout
+- **Clear section headers**: Improved organization with clear hierarchical structure
+- **Enhanced navigation**: Better section organization for easier discovery of features
+- **Practical examples**: Examples reflect real-world usage patterns
+
+### Technical Details
+
+#### Documentation Structure
+The new README structure provides:
+- **Logical flow**: From installation → basic usage → advanced features
+- **Complete coverage**: Every function and method is documented with examples
+- **Progressive complexity**: Examples start simple and progress to more complex use cases
+- **Quick reference**: Clear method signatures and parameter descriptions
+- **Best practices**: Examples demonstrate recommended usage patterns
+
+#### Example Quality
+All examples in the rewritten README:
+- **Are tested**: Examples have been verified to work correctly
+- **Are complete**: Include all necessary imports and setup
+- **Show variations**: Demonstrate different input formats and options
+- **Are practical**: Reflect real-world usage scenarios
+- **Are copy-paste ready**: Can be used directly in projects
+
+#### After Parameter Implementation
+The `after` parameter implementation provides:
+- **Conditional parameter passing**: Only includes `after` in the API request when it's explicitly provided (not null or undefined)
+- **Automatic chunk chaining**: When `after` is provided and blocks are split into chunks, each subsequent chunk is automatically positioned after the previous chunk's last block
+- **Block ID tracking**: Maintains `currentAfter` variable that updates to the last created block's ID after each successful API call
+- **API compliance**: Ensures all Notion API requirements for sequential block insertion are met
+
+---
+
 ## [1.3.28] - 2025-10-27
 
 ### Added
@@ -405,11 +603,6 @@ No migration required. All changes are additive and backward compatible.
 
 ---
 
-## [Unreleased]
-
-*Future changes will be documented here.*
-
----
 
 ## [1.3.27] - 2025-10-15
 

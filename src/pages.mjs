@@ -373,6 +373,69 @@ export function createNotionBuilder({
     }
 
     /**
+     * Recursively checks for table blocks without children.
+     * @private
+     * @param {Array} blocks - Array of blocks to check
+     * @returns {Array} Array of error messages for tables without children
+     */
+    function validateTables(blocks) {
+        const errors = [];
+        
+        function checkBlock(block) {
+            if (!block || typeof block !== "object") return;
+            
+            if (block.type === "table") {
+                const children = block.table?.children || [];
+                if (children.length === 0) {
+                    errors.push("Table block found without any children. Tables must have at least one table_row child.");
+                }
+            }
+            
+            // Recursively check children
+            if (block.children && Array.isArray(block.children)) {
+                block.children.forEach(checkBlock);
+            }
+            
+            // Check children in block-specific locations
+            if (block.table?.children) {
+                block.table.children.forEach(checkBlock);
+            }
+            if (block.column_list?.children) {
+                block.column_list.children.forEach(checkBlock);
+            }
+            if (block.column?.children) {
+                block.column.children.forEach(checkBlock);
+            }
+            if (block.toggle?.children) {
+                block.toggle.children.forEach(checkBlock);
+            }
+            if (block.callout?.children) {
+                block.callout.children.forEach(checkBlock);
+            }
+            if (block.quote?.children) {
+                block.quote.children.forEach(checkBlock);
+            }
+            if (block.bulleted_list_item?.children) {
+                block.bulleted_list_item.children.forEach(checkBlock);
+            }
+            if (block.numbered_list_item?.children) {
+                block.numbered_list_item.children.forEach(checkBlock);
+            }
+            if (block.to_do?.children) {
+                block.to_do.children.forEach(checkBlock);
+            }
+        }
+        
+        if (Array.isArray(blocks)) {
+            blocks.forEach(checkBlock);
+        } else if (blocks && typeof blocks === "object") {
+            checkBlock(blocks);
+        }
+        
+        return errors;
+    }
+
+    /**
      * Splits an array of blocks if it exceeds the maximum size allowed by the Notion API.
      * @private
      * @param {Array} blocks - The array of blocks to chunk.
@@ -936,6 +999,10 @@ export function createNotionBuilder({
                 "table_of_contents",
             ];
 
+            if (typeof options === "number") {
+                options = String(options);
+            }
+
             if (
                 blockType === undefined ||
                 blockType === null ||
@@ -961,6 +1028,32 @@ export function createNotionBuilder({
             }
 
             const newBlock = block[blockType].createBlock(options);
+            
+            // If adding a table_row to a table parent, update table_width if needed
+            if (blockType === "table_row" && currentBlockStack.length > 0) {
+                const parentBlock = currentBlockStack[currentBlockStack.length - 1].block;
+                if (parentBlock?.type === "table") {
+                    const rowCells = newBlock?.table_row?.cells;
+                    const rowWidth = rowCells && Array.isArray(rowCells) ? rowCells.length : 0;
+                    const currentTableWidth = parentBlock?.table?.table_width ?? 0;
+                    const currentChildrenCount = parentBlock?.table?.children?.length ?? 0;
+                    
+                    // If this is the first row, set or update table_width
+                    if (currentChildrenCount === 0) {
+                        if (currentTableWidth === 0) {
+                            // Placeholder width - set from first row
+                            parentBlock.table.table_width = rowWidth;
+                        } else if (rowWidth > currentTableWidth) {
+                            // First row has more columns than specified width - update and warn
+                            console.warn(
+                                `[NotionBuilder] First table row has ${rowWidth} columns, but table_width was set to ${currentTableWidth}. Updating table_width to ${rowWidth}.`
+                            );
+                            parentBlock.table.table_width = rowWidth;
+                        }
+                    }
+                }
+            }
+            
             currentBlockStack[currentBlockStack.length - 1].children.push(
                 newBlock
             );
@@ -1590,6 +1683,32 @@ export function createNotionBuilder({
                 const error = `No data was added to the builder.`;
                 console.error(error);
                 throw new Error(error);
+            }
+
+            // Validate tables have children after building (check both content and additionalBlocks)
+            if (hasBlock) {
+                const blocksToValidate = [];
+                if (result.content) {
+                    if (Array.isArray(result.content)) {
+                        blocksToValidate.push(...result.content);
+                    } else if (result.content.children && Array.isArray(result.content.children)) {
+                        blocksToValidate.push(...result.content.children);
+                    }
+                }
+                if (result.additionalBlocks && Array.isArray(result.additionalBlocks)) {
+                    result.additionalBlocks.forEach(chunk => {
+                        if (Array.isArray(chunk)) {
+                            blocksToValidate.push(...chunk);
+                        }
+                    });
+                }
+                
+                const tableErrors = validateTables(blocksToValidate);
+                if (tableErrors.length > 0) {
+                    const error = `[NotionBuilder] ${tableErrors.join(" ")}`;
+                    console.error(error);
+                    throw new Error(error);
+                }
             }
 
             resetBuilder();

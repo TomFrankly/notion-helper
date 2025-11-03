@@ -77,7 +77,7 @@ export const request = {
          * @param {Object} [options.data.cover] - The cover of the page.
          * @param {Array<Object>} [options.data.children] - An array of child blocks to add to the page.
          * @param {Object} [options.client] - The Notion client object. Either this or apiCall must be provided.
-         * @param {Function} [options.apiCall] - A custom function for making API calls. Either this or client must be provided.
+         * @param {Function} [options.apiCall] - A custom function for making API calls. Receives `{ type: 'create_page', data }` as argument. Either this or client must be provided.
          * @param {Function} [options.getPage=(response) => response] - A function to extract the page data from the API response. If you're passing a custom apiCall function, you should pass a getPage function as well.
          * @param {Function} [options.getResults=(response) => response.results] - A function to extract results from the API response when appending blocks. Enables the append() method to append all child blocks in the request. If you're passing a custom apiCall function, you should pass a getResults function as well.
          * @param {number} [options.templateWaitMs=3000] - Milliseconds to wait after page creation when using templates, before appending children. This allows time for Notion's template processing to complete.
@@ -107,14 +107,29 @@ export const request = {
          * const NOTION_TOKEN = 'your-notion-token';
          * const NOTION_VERSION = '2025-09-03';
          *
-         * const customApiCall = async (data) => {
-         *   return await ky.post('https://api.notion.com/v1/pages', {
-         *     json: data,
-         *     headers: {
-         *       'Authorization': `Bearer ${NOTION_TOKEN}`,
-         *       'Notion-Version': NOTION_VERSION,
-         *     },
-         *   }).json();
+         * const apiCall = async ({ type, data }) => {
+         *   if (type === 'create_page') {
+         *     return await ky.post('https://api.notion.com/v1/pages', {
+         *       json: data,
+         *       headers: {
+         *         'Authorization': `Bearer ${NOTION_TOKEN}`,
+         *         'Notion-Version': NOTION_VERSION,
+         *       },
+         *     }).json();
+         *   } else if (type === 'append_blocks') {
+         *     // createPage calls this when appending children
+         *     const { block_id, children, after } = data;
+         *     return await ky.patch(
+         *       `https://api.notion.com/v1/blocks/${block_id}/children`,
+         *       {
+         *         json: { children, ...(after && { after }) },
+         *         headers: {
+         *           'Authorization': `Bearer ${NOTION_TOKEN}`,
+         *           'Notion-Version': NOTION_VERSION,
+         *         },
+         *       }
+         *     ).json();
+         *   }
          * };
          *
          * const page = createNotion()
@@ -127,7 +142,7 @@ export const request = {
          *
          * const result = await request.pages.create({
          *   data: page.content,
-         *   apiCall: customApiCall,
+         *   apiCall,
          *   getPage: (response) => response,
          *   getResults: (response) => response.results
          * });
@@ -261,9 +276,15 @@ export const request = {
                     }
                 };
             } else if (typeof apiCall === "function") {
-                callingFunction = async (...args) => {
+                callingFunction = async (data) => {
                     try {
-                        return await apiCall(...args);
+                        
+                        try {
+                            return await apiCall({ type: 'create_page', data });
+                        } catch (error) {
+                            
+                            return await apiCall(data);
+                        }
                     } catch (error) {
                         console.error(
                             `Error encountered when calling Notion API to create page: ${error}`
@@ -372,7 +393,7 @@ export const request = {
              * @param {string} options.after - The ID of an existing block after which to append the children.
              * @param {Array<Object>} options.children - An array of child blocks to append.
              * @param {Object} [options.client] - The Notion client object. Either this or apiCall must be provided.
-             * @param {Function} [options.apiCall] - A custom function for making API calls. Either this or client must be provided.
+             * @param {Function} [options.apiCall] - A custom function for making API calls. Receives `{ type: 'append_blocks', data: { block_id, children, after } }` as argument. Either this or client must be provided.
              * @param {Function} [options.getResults] - A function to extract results from the API response. Defaults to response => response.results, which will work if you pass a client object created with the Notion SDK: https://github.com/makenotion/notion-sdk-js. If you're passing a custom apiCall function, you should provide a matching getResults function that can handle the response and return the results array, which contains the created blocks.
              * @returns {Promise<Object>} An object containing the API responses and the total number of API calls made.
              * @example
@@ -391,11 +412,12 @@ export const request = {
              *
              * const NOTION_TOKEN = 'your-notion-token';
              *
-             * const customApiCall = async (block_id, children) => {
+             * const apiCall = async ({ type, data }) => {
+             *   const { block_id, children, after } = data;
              *   const response = await ky.patch(
              *     `https://api.notion.com/v1/blocks/${block_id}/children`,
              *     {
-             *       json: { children },
+             *       json: { children, ...(after && { after }) },
              *       headers: {
              *         'Authorization': `Bearer ${NOTION_TOKEN}`,
              *         'Notion-Version': '2025-09-03',
@@ -410,7 +432,7 @@ export const request = {
              * const { apiResponses, apiCallCount } = await request.blocks.children.append({
              *   block_id: 'your-block-id',
              *   children: childBlocks.content,
-             *   apiCall: customApiCall
+             *   apiCall
              * });
              */
             append: (() => {
@@ -497,6 +519,10 @@ export const request = {
                         if (debug) {
                             console.log(`[DEBUG] Created ${chunks.length} chunks from ${children.length} children`);
                         }
+                        
+                       
+                        let currentAfter = after;
+                        const shouldChainChunks = after !== null && after !== undefined;
                         
                         for (let chunk of chunks) {
 
@@ -599,10 +625,19 @@ export const request = {
                                     }
                                 };
                             } else if (typeof apiCall === "function") {
-                                callingFunction = async function (...args) {
+                                callingFunction = async function (block_id, children, after) {
                                     apiCallCount++;
                                     try {
-                                        return await apiCall(...args);
+
+                                        try {
+                                            return await apiCall({ 
+                                                type: 'append_blocks', 
+                                                data: { block_id, children, after } 
+                                            });
+                                        } catch (error) {
+                                            
+                                            return await apiCall(block_id, children, after);
+                                        }
                                     } catch (error) {
                                         console.error(
                                             `Error encountered when calling Notion API to append block: ${error}`
@@ -623,7 +658,8 @@ export const request = {
                             
                             const response = await callingFunction(
                                 block_id,
-                                chunk
+                                chunk,
+                                currentAfter
                             );
                             
                             if (debug) {
@@ -633,6 +669,10 @@ export const request = {
                             if (response) {
                                 allResponses.push(response);
                                 const results = getResults(response);
+
+                                if (shouldChainChunks && results && results.length > 0) {
+                                    currentAfter = results[results.length - 1].id;
+                                }
 
                                 for (let [index, block] of chunk.entries()) {
 
@@ -728,7 +768,7 @@ export const request = {
  * @param {Object} [options.data.cover] - The cover of the page.
  * @param {Array<Object>} [options.data.children] - An array of child blocks to add to the page.
  * @param {Object} [options.client] - The Notion client object. Either this or apiCall must be provided.
- * @param {Function} [options.apiCall] - A custom function for making API calls. Either this or client must be provided.
+ * @param {Function} [options.apiCall] - A custom function for making API calls. Receives `{ type: 'create_page', data }` as argument. Either this or client must be provided.
  * @param {Function} [options.getPage] - A function to extract the page data from the API response. Defaults to (response) => response.
  * @param {Function} [options.getResults] - A function to extract results from the API response when appending blocks. Defaults to (response) => response.results.
  * @param {number} [options.templateWaitMs=3000] - Milliseconds to wait after page creation when using templates, before appending children.
@@ -753,13 +793,22 @@ export const request = {
  * });
  *
  * // Using with custom API call function
- * const customApiCall = async (data) => {
- *   // Your custom API call implementation
+ * const apiCall = async ({ type, data }) => {
+ *   if (type === 'create_page') {
+ *     // Your custom API call implementation for page creation
+ *     return await someHTTPClient.post('https://api.notion.com/v1/pages', { json: data });
+ *   } else if (type === 'append_blocks') {
+ *     // Your custom API call implementation for block appending
+ *     const { block_id, children, after } = data;
+ *     return await someHTTPClient.patch(`https://api.notion.com/v1/blocks/${block_id}/children`, { 
+ *       json: { children, ...(after && { after }) }
+ *     });
+ *   }
  * };
  *
  * const result = await createPage({
  *   data: page.content,
- *   apiCall: customApiCall,
+ *   apiCall,
  *   getPage: (response) => response,
  *   getResults: (response) => response.results
  * });
@@ -776,7 +825,7 @@ export function createPage(options) {
  * @param {string} options.block_id - The ID of the parent block to append children to. Can be a page ID.
  * @param {Array<Object>} options.children - An array of child blocks to append.
  * @param {Object} [options.client] - The Notion client object. Either this or apiCall must be provided.
- * @param {Function} [options.apiCall] - A custom function for making API calls. Either this or client must be provided.
+ * @param {Function} [options.apiCall] - A custom function for making API calls. Receives `{ type: 'append_blocks', data: { block_id, children, after } }` as argument. Either this or client must be provided.
  * @param {Function} [options.getResults] - A function to extract results from the API response. Defaults to response => response.results, which will work if you pass a client object created with the Notion SDK: https://github.com/makenotion/notion-sdk-js. If you're passing a custom apiCall function, you should provide a matching getResults function that can handle the response and return the results array, which contains the created blocks.
  * @returns {Promise<Object>} An object containing the API responses and the total number of API calls made.
  * @throws {Error} If there's an error during the API call or block appending process.
@@ -796,11 +845,12 @@ export function createPage(options) {
  *
  * const NOTION_TOKEN = 'your-notion-token';
  *
- * const customApiCall = async (block_id, children) => {
+ * const apiCall = async ({ type, data }) => {
+ *   const { block_id, children, after } = data;
  *   const response = await ky.patch(
  *     `https://api.notion.com/v1/blocks/${block_id}/children`,
  *     {
- *       json: { children },
+ *       json: { children, ...(after && { after }) },
  *       headers: {
  *         'Authorization': `Bearer ${NOTION_TOKEN}`,
  *         'Notion-Version': '2025-09-03',
@@ -815,7 +865,7 @@ export function createPage(options) {
  * const { apiResponses, apiCallCount } = await appendBlocks({
  *   block_id: 'your-block-id',
  *   children: childBlocks.content,
- *   apiCall: customApiCall
+ *   apiCall
  * });
  */
 export function appendBlocks(options) {
