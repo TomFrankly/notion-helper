@@ -85,6 +85,26 @@ import { paragraph } from "notion-helper"
 const paragraph = paragraph("I'd try the lounge at the Caesar's. It gets busy after three o'clock.")
 ```
 
+In all of these cases, the function will return a valid object representing a paragraph block:
+
+```js
+{
+  "type": "paragraph",
+  "paragraph": {
+    "rich_text": [ 
+      { 
+        "type": "text", 
+        "text": { 
+          "content": "I'd try the lounge at the Caesar's. It gets busy after three o'clock." 
+        }
+      }
+    ],
+    "color": "default",
+    "children": []
+  }
+}
+```
+
 ## Handling Large API Requests
 
 Notion Helper's most useful tools are those that help you make [Create Page](https://developers.notion.com/reference/post-page) and [Append Block Children](https://developers.notion.com/reference/patch-block-children) requests that contain large payloads.
