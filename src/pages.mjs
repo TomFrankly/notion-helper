@@ -206,6 +206,7 @@ export function quickPages({ parent, parent_type, pages, schema, childrenFn }) {
  * - `propertyId(property_id)` - Adds property ID for property operations
  * - `cover(url)` - Sets page cover image
  * - `icon(url)` - Sets page icon
+ * - `position(positionChoice)` - Sets position within parent page (only valid when parent is a page)
  * 
  * **Property Methods:**
  * - `property(name, type, value)` - Adds custom property
@@ -626,6 +627,32 @@ export function createNotionBuilder({
             }
 
             data.template = page_meta.template.createMeta(templateChoice)
+            return this;
+        },
+
+        /**
+         * Sets the position for where the new page should be placed within its parent page.
+         * This is only valid when the parent is a page (not a data source or database).
+         * The position parameter is not allowed unless the parent is a page.
+         *
+         * @param {(Object|string)} positionChoice - The position to place the new page. Can be:
+         *   - "page_start" (or "start", "top"): Place the page at the top of the parent.
+         *   - "page_end" (or "end", "bottom"): Place the page at the bottom of the parent (default behavior).
+         *   - A valid block ID (UUID string): Place the page after this specific block.
+         *   - A fully-formed position object, e.g.:
+         *     {
+         *       type: "after_block",
+         *       after_block: { id: "block-id" }
+         *     }
+         * @returns {this} The builder instance for method chaining.
+         */
+        position(positionChoice) {
+            if (positionChoice === undefined || positionChoice === null || (typeof positionChoice !== "string" && typeof positionChoice !== "object")) {
+                console.warn("position() method called in builder without a valid position choice. Ignoring this method call.");
+                return this;
+            }
+
+            data.position = page_meta.position.createMeta(positionChoice);
             return this;
         },
 

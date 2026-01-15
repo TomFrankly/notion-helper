@@ -5,11 +5,73 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.30] - 2025-01-15
+
+### Added
+
+#### Position Parameter Support for Page Creation
+
+- **New `position` parameter for pages with page parents**: Support for the Notion API's new `position` parameter when creating pages under a page parent (added in Notion API v5.7.0, January 2026)
+  - Allows specifying where a child page should be placed within its parent page
+  - Three position options:
+    - `"page_start"` (or `"start"`, `"top"`): Place the new page at the top of the parent
+    - `"page_end"` (or `"end"`, `"bottom"`): Place the new page at the bottom (default behavior)
+    - Block ID (UUID): Place the new page after a specific block
+  - Available via `page_meta.position.createMeta()` API method
+  - Available via `position()` shorthand function
+  - Available via `position()` method in the fluent builder interface
+
+```javascript
+// Using the fluent builder
+const page = createNotionBuilder()
+  .parentPage("parent-page-id")
+  .position("page_start") // Place at top of parent page
+  .title("title", "My Sub-Page")
+  .build();
+
+// Place after a specific block
+const page2 = createNotionBuilder()
+  .parentPage("parent-page-id")
+  .position("specific-block-id") // Place after this block
+  .title("title", "Another Sub-Page")
+  .build();
+
+// Using the shorthand function
+import { position, parentPage } from "notion-helper";
+
+const posObj = position("page_start"); // { type: "page_start" }
+const posObj2 = position("block-uuid"); // { type: "after_block", after_block: { id: "block-uuid" } }
+
+// Using a fully-formed position object
+const posObj3 = position({
+  type: "after_block",
+  after_block: { id: "block-id" },
+});
+```
+
+### Technical Details
+
+#### Position Parameter Implementation
+
+The `position` parameter implementation provides:
+
+- **String normalization**: Accepts various string inputs (`"page_start"`, `"start"`, `"top"`, `"page_end"`, `"end"`, `"bottom"`) and normalizes them to the API format
+- **UUID validation**: Validates block IDs as proper UUIDs before creating `after_block` position objects
+- **Object validation**: Validates fully-formed position objects for correct structure
+- **Graceful handling**: Returns `null` for invalid inputs with console warnings
+
+#### API Reference
+
+See the [Notion API documentation](https://developers.notion.com/reference/post-page#choosing-a-parent) for more details on the `position` parameter.
+
+---
+
 ## [1.3.29] - 2025-11-03
 
 ### Added
 
 #### Custom API Call Options Object Support
+
 - **Enhanced `apiCall` callback signature**: Custom API call functions now receive options objects instead of positional arguments
   - Page creation: `apiCall({ type: 'create_page', data })`
   - Block append: `apiCall({ type: 'append_blocks', data: { block_id, children, after } })`
@@ -22,26 +84,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ```javascript
 // Unified callback function for all operations
 const apiCall = async ({ type, data }) => {
-  if (type === 'create_page') {
-    return await ky.post('https://api.notion.com/v1/pages', {
-      json: data,
-      headers: {
-        'Authorization': `Bearer ${NOTION_TOKEN}`,
-        'Notion-Version': '2025-09-03',
-      },
-    }).json();
-  } else if (type === 'append_blocks') {
+  if (type === "create_page") {
+    return await ky
+      .post("https://api.notion.com/v1/pages", {
+        json: data,
+        headers: {
+          Authorization: `Bearer ${NOTION_TOKEN}`,
+          "Notion-Version": "2025-09-03",
+        },
+      })
+      .json();
+  } else if (type === "append_blocks") {
     const { block_id, children, after } = data;
-    return await ky.patch(
-      `https://api.notion.com/v1/blocks/${block_id}/children`,
-      {
+    return await ky
+      .patch(`https://api.notion.com/v1/blocks/${block_id}/children`, {
         json: { children, ...(after && { after }) },
         headers: {
-          'Authorization': `Bearer ${NOTION_TOKEN}`,
-          'Notion-Version': '2025-09-03',
+          Authorization: `Bearer ${NOTION_TOKEN}`,
+          "Notion-Version": "2025-09-03",
         },
-      }
-    ).json();
+      })
+      .json();
   }
 };
 
@@ -51,6 +114,7 @@ const blockResult = await appendBlocks({ block_id, children, apiCall });
 ```
 
 #### "After" Parameter Support for Block Append Operations
+
 - **New `after` parameter in `request.blocks.children.append()`**: Support for inserting blocks after a specific block using Notion's `after` parameter
   - Allows appending blocks after a specific block ID
   - Automatically chains chunks when `after` is provided, ensuring sequential block insertion
@@ -61,19 +125,19 @@ const blockResult = await appendBlocks({ block_id, children, apiCall });
 ```javascript
 // Append blocks after a specific block
 const { apiResponses, apiCallCount } = await request.blocks.children.append({
-  block_id: 'your-block-id',
-  after: 'existing-block-id',  // Insert after this block
+  block_id: "your-block-id",
+  after: "existing-block-id", // Insert after this block
   children: childBlocks.content,
-  client: notion
+  client: notion,
 });
 
 // When chaining multiple chunks with after parameter,
 // each chunk is automatically inserted after the previous chunk's last block
 const { apiResponses } = await request.blocks.children.append({
-  block_id: 'your-page-id',
-  after: 'target-block-id',
-  children: largeBlockArray,  // Will be split into chunks
-  client: notion
+  block_id: "your-page-id",
+  after: "target-block-id",
+  children: largeBlockArray, // Will be split into chunks
+  client: notion,
   // Chunk 1 inserted after 'target-block-id'
   // Chunk 2 inserted after chunk 1's last block
   // Chunk 3 inserted after chunk 2's last block
@@ -84,6 +148,7 @@ const { apiResponses } = await request.blocks.children.append({
 ### Changed
 
 #### Comprehensive README Rewrite and Expansion
+
 - **Complete README overhaul**: Fully rewritten and significantly expanded README documentation
   - **Enhanced organization**: Restructured content with clear sections and improved navigation
   - **Comprehensive block documentation**: Added detailed documentation sections for all block types with extensive code examples
@@ -92,6 +157,7 @@ const { apiResponses } = await request.blocks.children.append({
   - **Better formatting**: Improved code examples, clearer structure, and enhanced readability
 
 #### Block Type Documentation Improvements
+
 - **Comprehensive block type sections**: Added or significantly expanded documentation for all block types:
   - **Audio blocks**: Complete examples showing URL strings, options objects, and caption variations
   - **Bookmark blocks**: Examples with URLs, captions (string, array, and rich text formats)
@@ -117,6 +183,7 @@ const { apiResponses } = await request.blocks.children.append({
   - **Video blocks**: Examples with URLs, captions, and various formats
 
 #### Page Property Documentation Enhancements
+
 - **Expanded property method documentation**: Added comprehensive examples for all page property types:
   - **Title property**: Examples showing various input formats
   - **Rich Text property**: Examples with strings, arrays, rich text objects, and formatting
@@ -134,6 +201,7 @@ const { apiResponses } = await request.blocks.children.append({
   - **URL property**: Examples with URL strings
 
 #### Page Meta Documentation Improvements
+
 - **Enhanced parent documentation**: Expanded documentation for parent types:
   - **Data Source parent**: Clear examples using `parentDataSource()` method
   - **Page parent**: Examples using `parentPage()` method
@@ -147,6 +215,7 @@ const { apiResponses } = await request.blocks.children.append({
   - **Template**: Comprehensive examples showing template usage with shortcuts and full objects
 
 #### Fluent Interface Documentation Expansion
+
 - **Enhanced builder pattern examples**: Added more comprehensive examples for the fluent interface
   - **Method chaining examples**: Clear demonstrations of chaining multiple methods
   - **Nested block examples**: Examples showing complex nested structures
@@ -155,6 +224,7 @@ const { apiResponses } = await request.blocks.children.append({
   - **Complete workflow examples**: End-to-end examples showing full page creation workflows
 
 #### Installation and Setup Documentation
+
 - **Enhanced installation section**: Improved instructions for:
   - **Node.js installation**: Clear npm installation steps
   - **Browser usage**: Expanded browser usage documentation with examples and CORS guidance
@@ -162,6 +232,7 @@ const { apiResponses } = await request.blocks.children.append({
 - **Better import examples**: Comprehensive examples showing different import patterns
 
 #### API Request Handling Documentation
+
 - **Expanded large request handling**: Enhanced documentation covering:
   - **Payload size limits**: Clear explanation of 500KB payload limit
   - **Block count limits**: Documentation of 1,000 block limit per request
@@ -170,6 +241,7 @@ const { apiResponses } = await request.blocks.children.append({
   - **Request orchestration**: Examples using `request.pages.create()` and `request.blocks.children.append()`
 
 #### Developer Experience Improvements
+
 - **Better code examples**: All examples are now copy-paste ready and tested
 - **Consistent formatting**: Unified code example formatting throughout
 - **Clear section headers**: Improved organization with clear hierarchical structure
@@ -179,7 +251,9 @@ const { apiResponses } = await request.blocks.children.append({
 ### Technical Details
 
 #### Documentation Structure
+
 The new README structure provides:
+
 - **Logical flow**: From installation → basic usage → advanced features
 - **Complete coverage**: Every function and method is documented with examples
 - **Progressive complexity**: Examples start simple and progress to more complex use cases
@@ -187,7 +261,9 @@ The new README structure provides:
 - **Best practices**: Examples demonstrate recommended usage patterns
 
 #### Example Quality
+
 All examples in the rewritten README:
+
 - **Are tested**: Examples have been verified to work correctly
 - **Are complete**: Include all necessary imports and setup
 - **Show variations**: Demonstrate different input formats and options
@@ -195,7 +271,9 @@ All examples in the rewritten README:
 - **Are copy-paste ready**: Can be used directly in projects
 
 #### After Parameter Implementation
+
 The `after` parameter implementation provides:
+
 - **Conditional parameter passing**: Only includes `after` in the API request when it's explicitly provided (not null or undefined)
 - **Automatic chunk chaining**: When `after` is provided and blocks are split into chunks, each subsequent chunk is automatically positioned after the previous chunk's last block
 - **Block ID tracking**: Maintains `currentAfter` variable that updates to the last created block's ID after each successful API call
@@ -208,6 +286,7 @@ The `after` parameter implementation provides:
 ### Added
 
 #### Debug Mode for API Requests
+
 - **New `debug` parameter in `request.pages.create()`**: Optional debug mode for detailed logging during page creation
   - Logs page creation data (first 500 characters)
   - Confirms successful page creation with page ID
@@ -220,7 +299,7 @@ The `after` parameter implementation provides:
 const result = await request.pages.create({
   data: pageData,
   client: notion,
-  debug: true  // Enable detailed debug logging
+  debug: true, // Enable detailed debug logging
 });
 ```
 
@@ -232,11 +311,13 @@ const result = await request.pages.create({
   - Confirms API call success
 
 #### Table of Contents Block Support
+
 - **Added `table_of_contents` block type**: Support for Notion's table of contents block type
   - Automatically recognized as a block type that doesn't require text content
   - Consistent with other non-text block types like divider and column
 
 #### Page Parent Type Detection and Auto-Renaming
+
 - **Intelligent title property handling**: Automatic detection and renaming of title properties based on page parent type
   - Tracks `parentIsDataSource` to distinguish between data source parents and page parents
   - When a page has a page parent (not a data source), automatically detects non-standard title property names
@@ -246,9 +327,9 @@ const result = await request.pages.create({
 ```javascript
 // Example: Automatic title property renaming for pages with page parents
 builder
-  .parentPage('page-id')
-  .richText('Name', 'My Page Title')  // Will be automatically renamed to 'title'
-  .paragraph('Content')
+  .parentPage("page-id")
+  .richText("Name", "My Page Title") // Will be automatically renamed to 'title'
+  .paragraph("Content")
   .build();
 
 // Console warning shown:
@@ -258,6 +339,7 @@ builder
 ### Changed
 
 #### Enhanced Template Children Handling
+
 - **Improved template page creation**: Enhanced handling of children property when using templates
   - Now explicitly deletes the `children` property when templates are used
   - Previously set to empty array, now completely removed for cleaner API requests
@@ -266,12 +348,13 @@ builder
 ```javascript
 // When using templates, the children property is now completely removed from the request
 const result = await request.pages.create({
-  data: templatePage.content,  // children property deleted if template is used
-  client: notion
+  data: templatePage.content, // children property deleted if template is used
+  client: notion,
 });
 ```
 
 #### Documentation Improvements
+
 - **Updated Factory Function Guide**: Comprehensive updates to `guides/Factory Function.md`
   - Updated all references from deprecated `createNotion()` to `createNotionBuilder()`
   - Replaced `dbId()` with recommended `parentDataSource()` throughout
@@ -286,7 +369,9 @@ const result = await request.pages.create({
 ### Technical Details
 
 #### Debug Mode Implementation
+
 The new debug mode provides comprehensive logging at multiple stages:
+
 - **Page creation logging**: Logs the initial data payload (first 500 characters for readability)
 - **Success confirmation**: Logs the created page ID for verification
 - **Block processing**: Logs the number of blocks being appended
@@ -298,7 +383,9 @@ The new debug mode provides comprehensive logging at multiple stages:
 This debug information is invaluable for troubleshooting complex page structures, large block hierarchies, and API integration issues.
 
 #### Parent Type Detection Logic
+
 The page parent type detection system:
+
 - Maintains `parentIsDataSource` boolean flag throughout the builder lifecycle
 - Checks parent type when building the final page structure
 - Only applies auto-renaming for page parents (not data source parents)
@@ -307,6 +394,7 @@ The page parent type detection system:
 - Provides clear console warnings to help developers understand the automatic behavior
 
 #### Template Support for Page Creation
+
 - **New `template()` method in page builder**: Added support for setting data source templates when creating pages
   - Accepts multiple input formats:
     - String shortcuts: `"none"`, `"default"`, or a valid template page ID (UUID)
@@ -316,16 +404,18 @@ The page parent type detection system:
 
 ```javascript
 // Usage examples:
-builder.template("default")           // Use default template
-builder.template("none")              // No template
-builder.template("uuid-string")       // Use specific template by ID
-builder.template({                    // Use fully-formed template object
+builder.template("default"); // Use default template
+builder.template("none"); // No template
+builder.template("uuid-string"); // Use specific template by ID
+builder.template({
+  // Use fully-formed template object
   type: "template_id",
-  template_id: "your-template-id"
-})
+  template_id: "your-template-id",
+});
 ```
 
 #### Template Page Creation Handling
+
 - **Enhanced `request.pages.create()` method**: Added comprehensive template support for page creation
   - **Automatic children handling**: When templates are used, all children blocks are automatically moved out of the initial page creation request (required by Notion API)
   - **Template processing wait**: Configurable wait time (`templateWaitMs`, default: 3000ms) to allow Notion's template processing to complete
@@ -337,7 +427,7 @@ builder.template({                    // Use fully-formed template object
 const result = await request.pages.create({
   data: templatePage.content,
   client: notion,
-  templateWaitMs: 2000 // Wait 2 seconds for template processing
+  templateWaitMs: 2000, // Wait 2 seconds for template processing
 });
 
 // Advanced template usage with callback
@@ -350,14 +440,14 @@ const result = await request.pages.create({
     // page.parent contains data_source_id or database_id if needed
     // fallbackWaitMs provides the templateWaitMs value for custom timing
     // Custom verification logic here
-  }
+  },
 });
 
 // Manual control over template verification
 const result = await request.pages.create({
   data: templatePage.content,
   client: notion,
-  skipAutoAppendOnTemplate: true
+  skipAutoAppendOnTemplate: true,
 });
 
 // Manually append children after verification
@@ -365,12 +455,13 @@ if (result.pendingChildren && result.pendingChildren.length > 0) {
   await request.blocks.children.append({
     block_id: result.pageId,
     children: result.pendingChildren,
-    client: notion
+    client: notion,
   });
 }
 ```
 
 #### Template Builder Configuration
+
 - **New `handleTemplatePageChildren` option**: Added to `createNotionBuilder()` for automatic template children handling
   - When enabled, automatically moves all children to `additionalBlocks` when templates are applied
   - Ensures compliance with Notion API requirements for template page creation
@@ -379,15 +470,15 @@ if (result.pendingChildren && result.pendingChildren.length > 0) {
 
 ```javascript
 // Enable automatic template children handling
-const builder = createNotionBuilder({ 
-  handleTemplatePageChildren: true 
+const builder = createNotionBuilder({
+  handleTemplatePageChildren: true,
 });
 
 const result = builder
-  .parentDataSource('data-source-id')
-  .template('default')
-  .title('Name', 'Task from Template')
-  .paragraph('This will be moved to additionalBlocks')
+  .parentDataSource("data-source-id")
+  .template("default")
+  .title("Name", "Task from Template")
+  .paragraph("This will be moved to additionalBlocks")
   .build();
 
 // Create page, then append additional blocks
@@ -398,13 +489,14 @@ if (result.additionalBlocks && result.additionalBlocks.length > 0) {
   for (const blockChunk of result.additionalBlocks) {
     await notion.blocks.children.append({
       block_id: newPage.id,
-      children: blockChunk
+      children: blockChunk,
     });
   }
 }
 ```
 
 #### Template Documentation and Developer Guide
+
 - **New comprehensive Template Usage Guide**: Added detailed developer guide covering template implementation
   - **Two-level control system**: Explains builder-level vs request-level template handling
   - **Production best practices**: Webhook integration, template verification, error handling
@@ -413,6 +505,7 @@ if (result.additionalBlocks && result.additionalBlocks.length > 0) {
   - **Code examples**: Practical, copy-paste examples for all template scenarios
 
 #### Template Callback API Improvements
+
 - **Enhanced callback signature**: Updated `onTemplatePageCreated` callback to receive `{ page, template, fallbackWaitMs }` instead of `{ page, pageId }`
   - Removes redundant `pageId` parameter since it's available as `page.id`
   - Adds `template` parameter providing access to the template object used to create the page
@@ -428,13 +521,14 @@ onTemplatePageCreated: async ({ page, template, fallbackWaitMs }) => {
   // page.parent contains data_source_id or database_id if needed
   // Use fallbackWaitMs for custom verification timing
   // Custom verification logic here
-}
+};
 ```
 
 #### Enhanced Type Validation
+
 - **Improved `createMeta` functions**: Added explicit type validation parameters to metadata creation functions
   - `page_id.createMeta()` now validates against "UUID" type
-  - `block_id.createMeta()` now validates against "UUID" type  
+  - `block_id.createMeta()` now validates against "UUID" type
   - `property_id.createMeta()` now validates against "string" type
 - **Enhanced error messages**: All validation functions now include the actual passed value in error messages
   - Improves debugging experience by showing exactly what value caused the validation failure
@@ -442,16 +536,17 @@ onTemplatePageCreated: async ({ page, template, fallbackWaitMs }) => {
 
 ```javascript
 // Before:
-createMeta: (page_id) => validateValue(page_id)
+createMeta: (page_id) => validateValue(page_id);
 
 // After:
-createMeta: (page_id) => validateValue(page_id, "UUID")
+createMeta: (page_id) => validateValue(page_id, "UUID");
 
 // Enhanced error messages now show:
 // "Invalid UUID. Returning null. Passed value: invalid-id-string"
 ```
 
 #### Template Validation Improvements
+
 - **Case-insensitive template validation**: Template shortcuts now work regardless of case
   - "NONE", "none", "None" all accepted for no template
   - "DEFAULT", "default", "Default" all accepted for default template
@@ -459,22 +554,24 @@ createMeta: (page_id) => validateValue(page_id, "UUID")
 
 ```javascript
 // All these now work equivalently:
-builder.template("none")
-builder.template("NONE")  
-builder.template("None")
+builder.template("none");
+builder.template("NONE");
+builder.template("None");
 
-builder.template("default")
-builder.template("DEFAULT")
-builder.template("Default")
+builder.template("default");
+builder.template("DEFAULT");
+builder.template("Default");
 ```
 
 #### Utility Function Export
+
 - **New `isValidUUID` export**: Exported `isValidUUID` utility function from the main library
   - Can be used independently for UUID validation
   - Useful for custom validation logic outside of the builder pattern
   - Provides consistent UUID validation across the library
 
 #### URL Processing Utility
+
 - **New `extractNotionPageId()` function**: Utility for extracting Notion page IDs from URLs
   - Handles both dashed (`xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx`) and non-dashed (`xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx`) UUID formats
   - Extracts IDs from URLs containing query parameters
@@ -495,12 +592,15 @@ extractNotionPageId("https://notion.so/page/12345678123412341234123456789abc?v=1
 ### Changed
 
 #### Import Dependencies
+
 - **Updated `pages.mjs` imports**: Added `isValidUUID` import from utils module to support template validation functionality
 
 ### Technical Details
 
 #### Template Metadata Definition
+
 The new `template` metadata definition includes:
+
 - **Type**: `"string"` (for documentation purposes)
 - **createMeta function**: Comprehensive validation logic that:
   - Handles undefined/null inputs gracefully
@@ -510,14 +610,18 @@ The new `template` metadata definition includes:
   - Returns appropriate template objects or null for invalid inputs
 
 #### Template Method Implementation
+
 The `template()` method in the page builder:
+
 - **Input validation**: Checks for valid string or object inputs
 - **Error handling**: Provides console warnings for malformed calls
 - **Method chaining**: Returns `this` for fluent API usage
 - **Data storage**: Stores validated template metadata in the builder's data object
 
 #### UUID Extraction Logic
+
 The `extractNotionPageId()` function:
+
 - **Regex pattern**: Matches both 32-character and dashed UUID formats
 - **URL parsing**: Splits on query parameters to isolate the base URL
 - **Format normalization**: Converts dashed UUIDs to non-dashed format
@@ -527,9 +631,11 @@ The `extractNotionPageId()` function:
 ### Best Practices for Template Usage
 
 #### Production Template Handling
+
 For production applications using templates, consider these best practices:
 
-1. **Choose Your Control Level**: 
+1. **Choose Your Control Level**:
+
    - **Request-level control** (`handleTemplatePageChildren: false`): Use for simple cases, quick prototyping, and standard workflows
    - **Builder-level control** (`handleTemplatePageChildren: true`): Use for complex verification, batch operations, webhook integration, and custom retry logic
 
@@ -538,6 +644,7 @@ For production applications using templates, consider these best practices:
 3. **Template Content Verification**: For critical applications, consider fetching the template content beforehand and comparing it against the returned page object to verify template processing completion.
 
 4. **Callback Usage**: Use the `onTemplatePageCreated` callback for custom verification logic, such as:
+
    - Checking specific properties or content
    - Implementing retry logic
    - Logging template processing status
@@ -555,30 +662,30 @@ const result = await request.pages.create({
   onTemplatePageCreated: async ({ page, template, fallbackWaitMs }) => {
     // Custom verification logic
     console.log(`Using template: ${template.type}`);
-    
+
     const pageContent = await notion.blocks.children.list({
-      block_id: page.id
+      block_id: page.id,
     });
-    
+
     if (pageContent.results.length > 0) {
-      console.log('Template processing appears complete');
+      console.log("Template processing appears complete");
     } else {
-      console.log('Template still processing...');
+      console.log("Template still processing...");
       // fallbackWaitMs can be used for custom retry logic
     }
-  }
+  },
 });
 
 // Example: Production-ready template handling (Builder-level)
-const builder = createNotionBuilder({ 
-  handleTemplatePageChildren: true 
+const builder = createNotionBuilder({
+  handleTemplatePageChildren: true,
 });
 
 const templatePage = builder
-  .parentDataSource('data-source-id')
-  .template('default')
-  .title('Name', 'Task from Template')
-  .paragraph('This will be moved to additionalBlocks')
+  .parentDataSource("data-source-id")
+  .template("default")
+  .title("Name", "Task from Template")
+  .paragraph("This will be moved to additionalBlocks")
   .build();
 
 // Create page first, then handle template verification and block appending
@@ -589,26 +696,28 @@ if (templatePage.additionalBlocks && templatePage.additionalBlocks.length > 0) {
   for (const blockChunk of templatePage.additionalBlocks) {
     await notion.blocks.children.append({
       block_id: newPage.id,
-      children: blockChunk
+      children: blockChunk,
     });
   }
 }
 ```
 
 ### Breaking Changes
+
 None in this release.
 
 ### Migration Guide
+
 No migration required. All changes are additive and backward compatible.
 
 ---
-
 
 ## [1.3.27] - 2025-10-15
 
 ### Added
 
 #### Block Validation and Splitting
+
 - **New `validateAndSplitBlock()` utility function**: Intelligently handles blocks containing rich text objects that exceed Notion API character limits
   - Automatically splits oversized blocks into multiple API-compliant blocks
   - Preserves rich text formatting and structure during splitting
@@ -626,6 +735,7 @@ builder.addExistingBlock(largeBlock) // Now automatically handles size limits
 ### Technical Details
 
 #### Block Splitting Logic
+
 - **Character limit detection**: Identifies when rich text content exceeds API limits
 - **Intelligent splitting**: Breaks content at natural boundaries while preserving formatting
 - **Multiple block creation**: Returns array of compliant blocks when splitting is needed
@@ -638,16 +748,18 @@ builder.addExistingBlock(largeBlock) // Now automatically handles size limits
 ### Added
 
 #### Enhanced Property Validation
+
 - **Length validation for multiple property types**:
   - Equations: Character limit enforcement
   - URLs: Length and format validation
-  - Emails: Length and format validation  
+  - Emails: Length and format validation
   - Phone numbers: Length validation
   - Multi-selects: Item count and individual item length limits
   - Relations: Reference count limits
   - People: User count limits
 
 #### Rich Text Mention Support
+
 - **New helper functions for rich text mentions**:
   - User mentions with proper formatting
   - Page mentions with validation
@@ -656,6 +768,7 @@ builder.addExistingBlock(largeBlock) // Now automatically handles size limits
 ### Technical Details
 
 #### Validation Enhancements
+
 - **Property-specific limits**: Each property type now has appropriate character/item count limits
 - **Error handling**: Comprehensive validation with clear error messages
 - **API compliance**: Ensures all properties meet Notion API requirements
@@ -667,18 +780,21 @@ builder.addExistingBlock(largeBlock) // Now automatically handles size limits
 ### Fixed
 
 #### Rich Text Equations Bug Fix
+
 - **Fixed equation rendering**: Resolved issues with rich text equation blocks not displaying correctly
 - **Improved equation validation**: Enhanced validation for mathematical expressions
 
 ### Changed
 
 #### Dependency Management
+
 - **Removed peer dependency**: Eliminated peer dependency requirement for Notion SDK
 - **Simplified installation**: Users no longer need to manually install @notionhq/client
 
 ### Technical Details
 
 #### Equation Handling
+
 - **Enhanced equation parsing**: Improved handling of mathematical notation
 - **Better error messages**: More descriptive errors for invalid equation syntax
 - **Format validation**: Ensures equations meet Notion's formatting requirements
@@ -690,6 +806,7 @@ builder.addExistingBlock(largeBlock) // Now automatically handles size limits
 ### Added
 
 #### Data Source Support
+
 - **New parent data source functions**:
   - `parentDataSource()`: Full method for setting data source parents
   - `parentDs()`: Shorthand alias for data source parents
@@ -699,6 +816,7 @@ builder.addExistingBlock(largeBlock) // Now automatically handles size limits
 ### Changed
 
 #### API Compatibility
+
 - **Updated for new Notion API version**: Full compatibility with latest Notion API changes
 - **Enhanced parent object handling**: Improved support for various parent object types
 - **Updated documentation**: README reflects all new functionality
@@ -706,14 +824,16 @@ builder.addExistingBlock(largeBlock) // Now automatically handles size limits
 ### Technical Details
 
 #### Parent Object Functions
+
 ```javascript
 // New parent data source methods:
-builder.parentDataSource("data-source-id")
-builder.parentDs("data-source-id")        // Shorthand
-builder.parentDatabase("database-id")     // Database-specific
+builder.parentDataSource("data-source-id");
+builder.parentDs("data-source-id"); // Shorthand
+builder.parentDatabase("database-id"); // Database-specific
 ```
 
 #### API Version Compatibility
+
 - **Data source ID keys**: Support for `data_source_id` in parent objects
 - **Backward compatibility**: Maintains support for existing parent object formats
 - **Enhanced validation**: Improved validation for parent object types
@@ -725,6 +845,7 @@ builder.parentDatabase("database-id")     // Database-specific
 ### Changed
 
 #### Documentation and Build System Updates
+
 - **Removed documentation dependency**: Eliminated `documentation` package dependency from devDependencies
 - **Simplified build process**: Streamlined build scripts by removing documentation generation steps
 - **Updated prepublishOnly script**: Removed documentation build from prepublish process
@@ -732,15 +853,17 @@ builder.parentDatabase("database-id")     // Database-specific
 ### Technical Details
 
 #### Build System Improvements
+
 - **Cleaner dependencies**: Reduced package dependencies by removing unused documentation tools
 - **Faster builds**: Simplified build process for better performance
 - **Streamlined publishing**: More efficient prepublish process without documentation generation
 
 #### Script Changes
+
 ```json
 // Removed scripts:
 "docs": "...",
-"docs:build": "...", 
+"docs:build": "...",
 "docs:serve": "...",
 
 // Updated prepublishOnly:
@@ -754,12 +877,14 @@ builder.parentDatabase("database-id")     // Database-specific
 ### Fixed
 
 #### Payload Size Check Bug Fix
+
 - **Fixed max payload size check**: Resolved issue with payload size validation that was causing incorrect behavior
 - **Improved request handling**: Enhanced reliability of payload size calculations
 
 ### Technical Details
 
 #### Payload Validation
+
 - **Accurate size calculation**: Fixed algorithm for determining when payloads exceed API limits
 - **Better error handling**: Improved validation logic for large requests
 
@@ -770,6 +895,7 @@ builder.parentDatabase("database-id")     // Database-specific
 ### Added
 
 #### Comprehensive File Upload Support
+
 - **File uploads in all compatible blocks**: Added support for file attachments across all block types that support them
 - **Page cover and icon uploads**: Enhanced support for uploading custom page covers and icons
 - **File property support**: Added file upload capabilities for file properties in databases
@@ -778,12 +904,14 @@ builder.parentDatabase("database-id")     // Database-specific
 ### Technical Details
 
 #### File Upload Implementation
+
 - **Multi-format support**: Handles various file types and formats
 - **Size validation**: Ensures uploaded files meet Notion API requirements
 - **Error handling**: Comprehensive error handling for upload failures
 - **Progress tracking**: Support for monitoring upload progress
 
 #### Block Type Enhancements
+
 - **Media block support**: Enhanced support for image, video, and file blocks
 - **Cover image handling**: Improved page cover image upload and management
 - **Icon management**: Better support for custom page icons
@@ -795,6 +923,7 @@ builder.parentDatabase("database-id")     // Database-specific
 ### Added
 
 #### API Function Renaming and Improvements
+
 - **Renamed `createNotion()` to `createNotionBuilder()`**: Updated main function name for better clarity
 - **Deprecated function alias**: Maintained backward compatibility with deprecated `createNotion()` function
 - **Enhanced `buildRichTextObj()` structure**: Improved argument structure for better usability
@@ -802,17 +931,19 @@ builder.parentDatabase("database-id")     // Database-specific
 ### Changed
 
 #### Function Signatures
+
 ```javascript
 // New primary function:
-createNotionBuilder(options)
+createNotionBuilder(options);
 
 // Deprecated but still supported:
-createNotion(options) // Alias for createNotionBuilder()
+createNotion(options); // Alias for createNotionBuilder()
 ```
 
 ### Technical Details
 
 #### Rich Text Object Improvements
+
 - **Better argument handling**: Enhanced parameter structure for rich text objects
 - **Improved validation**: Better validation of rich text parameters
 - **Backward compatibility**: Maintained support for existing function calls
@@ -824,6 +955,7 @@ createNotion(options) // Alias for createNotionBuilder()
 ### Added
 
 #### Fluent Interface Enhancement
+
 - **New `addExistingBlock()` method**: Added method to fluent interface for adding pre-existing blocks
 - **Enhanced block management**: Improved support for working with existing block structures
 - **Better block composition**: Enhanced ability to compose pages from existing blocks
@@ -831,15 +963,17 @@ createNotion(options) // Alias for createNotionBuilder()
 ### Technical Details
 
 #### Block Addition Method
+
 ```javascript
 // New method signature:
-builder.addExistingBlock(block)
+builder.addExistingBlock(block);
 
 // Usage:
-builder.addExistingBlock(existingBlock)
+builder.addExistingBlock(existingBlock);
 ```
 
 #### Implementation Details
+
 - **Block validation**: Validates existing blocks before addition
 - **Structure preservation**: Maintains block structure and formatting
 - **Error handling**: Comprehensive error handling for invalid blocks
@@ -851,6 +985,7 @@ builder.addExistingBlock(existingBlock)
 ### Added
 
 #### Child Block Management
+
 - **Nested child block max count function**: Added functionality to manage maximum child block counts in pages.create
 - **Enhanced nesting support**: Improved handling of deeply nested block structures
 - **Better block organization**: Enhanced support for complex page structures
@@ -858,6 +993,7 @@ builder.addExistingBlock(existingBlock)
 ### Technical Details
 
 #### Child Block Counting
+
 - **Maximum count enforcement**: Ensures child block counts stay within API limits
 - **Nesting validation**: Validates nested block structures
 - **Performance optimization**: Optimized handling of large block hierarchies
@@ -869,6 +1005,7 @@ builder.addExistingBlock(existingBlock)
 ### Added
 
 #### Payload Size Management
+
 - **500KB payload limit handling**: Added comprehensive handling for Notion's 500KB payload limit
 - **Automatic chunking**: Implemented automatic payload chunking for large requests
 - **Enhanced request splitting**: Improved algorithm for splitting large requests into smaller chunks
@@ -876,6 +1013,7 @@ builder.addExistingBlock(existingBlock)
 ### Technical Details
 
 #### Payload Management
+
 - **Size calculation**: Accurate calculation of payload sizes
 - **Chunking algorithm**: Intelligent splitting of large payloads
 - **Request optimization**: Optimized request structure for better performance
@@ -888,6 +1026,7 @@ builder.addExistingBlock(existingBlock)
 ### Added
 
 #### TypeScript Support
+
 - **Full TypeScript integration**: Added comprehensive TypeScript support with type definitions
 - **Type definitions**: Generated TypeScript declaration files for better IDE support
 - **Build system integration**: Integrated TypeScript compilation into build process
@@ -895,6 +1034,7 @@ builder.addExistingBlock(existingBlock)
 ### Changed
 
 #### Project Structure
+
 - **Source reorganization**: Moved all source files to `src/` directory
 - **Build configuration**: Added TypeScript configuration and build scripts
 - **Package structure**: Updated package.json with TypeScript support
@@ -902,6 +1042,7 @@ builder.addExistingBlock(existingBlock)
 ### Technical Details
 
 #### TypeScript Implementation
+
 - **Type definitions**: Complete type definitions for all functions and interfaces
 - **Build process**: Automated TypeScript compilation
 - **IDE support**: Enhanced autocomplete and error checking
@@ -914,6 +1055,7 @@ builder.addExistingBlock(existingBlock)
 ### Added
 
 #### Advanced Block Support
+
 - **Column list support**: Added support for column_list blocks with proper handling
 - **Table support**: Enhanced table block support with improved functionality
 - **Recursive block handling**: Improved recursive handling of nested block structures
@@ -921,6 +1063,7 @@ builder.addExistingBlock(existingBlock)
 ### Changed
 
 #### Block Appending Logic
+
 - **Enhanced appendBlocks**: Updated appendBlocks to handle complex block types
 - **Improved recursion**: Better recursive handling of child blocks
 - **API limit compliance**: Ensures all blocks stay within Notion API limits
@@ -928,11 +1071,13 @@ builder.addExistingBlock(existingBlock)
 ### Technical Details
 
 #### Column List Implementation
+
 - **Structure preservation**: Maintains column list structure during operations
 - **Child block handling**: Proper handling of child blocks within columns
 - **API compliance**: Ensures column lists meet API requirements
 
 #### Table Enhancements
+
 - **Table structure**: Improved table creation and manipulation
 - **Cell management**: Better handling of table cells and content
 - **Formatting preservation**: Maintains table formatting and structure
@@ -941,4 +1086,4 @@ builder.addExistingBlock(existingBlock)
 
 ## Previous Releases
 
-*Additional historical releases would be documented here as needed*
+_Additional historical releases would be documented here as needed_

@@ -31,7 +31,7 @@ import {
     video,
 } from "./blocks.mjs"
 import { setIcon } from "./emoji-and-files.mjs";
-import { page_meta, page_props, parentDatabase, parentDb, parentDataSource, parentDs, parentPage, pageId, blockId, propertyId, cover, icon, title, richText, checkbox, date, email, files, multiSelect, number, people, phoneNumber, relation, select, status, url } from "./page-meta.mjs";
+import { page_meta, page_props, parentDatabase, parentDb, parentDataSource, parentDs, parentPage, pageId, blockId, propertyId, cover, icon, position, title, richText, checkbox, date, email, files, multiSelect, number, people, phoneNumber, relation, select, status, url } from "./page-meta.mjs";
 import { quickPages, createNotionBuilder, createNotion } from "./pages.mjs";
 import { request, createPage, appendBlocks } from "./requests.mjs";
 import { getDepth, getLongestArray, getTotalCount, getPayloadSize, validateAndSplitBlock, extractNotionPageId, isValidUUID } from "./utils.mjs";
@@ -63,6 +63,7 @@ export {
     propertyId,
     cover,
     icon,
+    position,
     title,
     richText,
     checkbox,
@@ -140,6 +141,7 @@ const NotionHelper = {
     propertyId,
     cover,
     icon,
+    position,
     title,
     richText,
     checkbox,

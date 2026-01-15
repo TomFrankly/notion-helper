@@ -193,6 +193,68 @@ export const page_meta = {
             }
         }
     },
+
+    /**
+     * Metadata definition for a position parameter (for page creation with page parent).
+     * Only valid when the parent is a page (not a data source or database).
+     * 
+     * @namespace
+     * @property {string} type - The data type the property accepts.
+     */
+    position: {
+        type: "string",
+        /**
+         * Creates a position object for specifying where a child page should be placed within its parent page.
+         * @function
+         * @param {(Object|string)} positionChoice - The position to place the new page. Can be:
+         *   - A fully-formed position object, e.g.:
+         *     {
+         *       type: "after_block",
+         *       after_block: { id: "block-id" }
+         *     }
+         *   - A string value:
+         *     - "page_start": Place the page at the top of the parent.
+         *     - "page_end": Place the page at the bottom of the parent (default behavior).
+         *     - A valid block ID (UUID string): Place the page after this specific block.
+         * @returns {Object|null} A position metadata object, or null if invalid.
+         */
+        createMeta: (positionChoice) => {
+            if (positionChoice === undefined || positionChoice === null || (typeof positionChoice !== "string" && typeof positionChoice !== "object")) {
+                console.warn("position() method called without a valid position choice. Ignoring this method call.");
+                return null;
+            }
+            
+            if (typeof positionChoice === "string") {
+                const normalized = positionChoice.toLowerCase().replace(/[-_]/g, "");
+                if (normalized === "pagestart" || normalized === "start" || normalized === "top") {
+                    return { type: "page_start" };
+                } else if (normalized === "pageend" || normalized === "end" || normalized === "bottom") {
+                    return { type: "page_end" };
+                } else if (isValidUUID(positionChoice)) {
+                    return { type: "after_block", after_block: { id: positionChoice } };
+                } else {
+                    console.warn(`Invalid position choice: ${positionChoice} – returning null.`);
+                    return null;
+                }
+            } else if (typeof positionChoice === "object") {
+                if (!positionChoice.hasOwnProperty("type")) {
+                    console.warn(`Position object does not have a "type" property. Returning null.`);
+                    return null;
+                }
+                
+                if (positionChoice.type === "after_block" && positionChoice.hasOwnProperty("after_block") && positionChoice.after_block?.id && isValidUUID(positionChoice.after_block.id)) {
+                    return positionChoice;
+                } else if (positionChoice.type === "page_start" || positionChoice.type === "page_end") {
+                    return positionChoice;
+                } else {
+                    console.warn(`Invalid position choice: ${JSON.stringify(positionChoice)} – returning null.`);
+                    return null;
+                }
+            }
+            
+            return null;
+        }
+    },
 };
 
 /*
@@ -308,6 +370,25 @@ export function cover(url) {
  */
 export function icon(url) {
     return page_meta.icon.createMeta(url);
+}
+
+/**
+ * Creates a position object for specifying where a child page should be placed within its parent page.
+ * Only valid when the parent is a page (not a data source or database).
+ * @memberof PageShorthand
+ * @param {(Object|string)} positionChoice - The position to place the new page. Can be:
+ *   - "page_start" (or "start", "top"): Place the page at the top of the parent.
+ *   - "page_end" (or "end", "bottom"): Place the page at the bottom of the parent (default behavior).
+ *   - A valid block ID (UUID string): Place the page after this specific block.
+ *   - A fully-formed position object, e.g.:
+ *     {
+ *       type: "after_block",
+ *       after_block: { id: "block-id" }
+ *     }
+ * @returns {Object|null} A position object, or null if invalid.
+ */
+export function position(positionChoice) {
+    return page_meta.position.createMeta(positionChoice);
 }
 
 /**
