@@ -5,6 +5,48 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.31] - 2026-09-04
+
+### Added
+
+#### Support for Position parameter in appendBlocks()
+
+- **Added support for the `position` parameter in `appendBlocks()`**: Support for the Notion API's new `position` parameter when appending blocks to a page, which replaces the `after` parameter. See the Notion API documentation's section on [Controlling Insert Position](https://developers.notion.com/reference/patch-block-children#controlling-insert-position) for full details.
+- `after` is still supported for backwards compatibility, but notion-helper will automatically convert `after` parameters with valid block IDs to the new `position` parameter.
+- Append Blocks requests that are split into chunks will now always provide the `position` parameter of the previous chunk's last block for requests after the first chunk. This guards against a race condition where another user, bot, or API request might be appending blocks t the same parent at the same time.
+
+#### Support for Native Notion Icons and Icon Objects
+
+- `setIcon` now accepts fully-formed `icon` objects. See the Notion API reference on [Icon](https://developers.notion.com/reference/page-property-values#icon) for full details.
+- `setIcon` also accepts non-URL, non-emoji, non-UUID strings. Strings of this nature are assumed to be valid native Notion icon names, and will return an icon object. (To set a color, pass a fully-formed icon object instead.)
+
+#### Support for HTML Blocks
+
+- `embed` now accepts file upload UUIDs, which can represent HTML files uploaded via the file upload API. Additionally, `embed` will now accept fully-formed embed objects. See the Notion API documentation on the [Embed block](https://developers.notion.com/reference/block#embed) for details.
+
+#### Support for Tab Blocks
+
+- The `blocks` API now supports Tab blocks. Use `block.tab.createBlock()`, the new `tab()` shorthand block creation function, or `tab()` in the builder. Pass an array of child blocks (must all be Paragraph blocks) as the single argument.
+- The `paragraph` functions now accept an `options.icon` parameter, which can be a URL representing an external image, an emoji character string, a native Notion icon name string, or a fully-formed icon object. This parameter can only be set on Paragraph blocks that are direct children of Tab blocks.
+
+#### Support for Verification properties
+
+- The `page_props` API can now set Verification properties on pages within wiki databases. Use `page_props.verification.setProp()`, the `verification()` shorthand function, or `verification()` in the builder.
+
+### Updated
+
+#### Page Template JSDoc
+
+- The JSDoc for seting page templates now includes an exmaple of how to set a timezone parameter, which will affect the time zone for @today and @now mentions. See [the section on Timezone Control](https://developers.notion.com/guides/data-apis/creating-pages-from-templates#step-2-create-page-using-a-template) in Notion's guide on working with page templates.
+
+### Fixed
+
+#### isValidUUID() Function
+
+- **Fixed `isValidUUID()` function to handle non-string inputs gracefully**: Added type check for input and provided console warnings for invalid inputs
+  - Now returns `false` for non-string inputs instead of throwing an error
+  - Provides clear console warnings when invalid inputs are detected
+
 ## [1.3.30] - 2025-01-15
 
 ### Added
@@ -635,7 +677,6 @@ The `extractNotionPageId()` function:
 For production applications using templates, consider these best practices:
 
 1. **Choose Your Control Level**:
-
    - **Request-level control** (`handleTemplatePageChildren: false`): Use for simple cases, quick prototyping, and standard workflows
    - **Builder-level control** (`handleTemplatePageChildren: true`): Use for complex verification, batch operations, webhook integration, and custom retry logic
 
@@ -644,7 +685,6 @@ For production applications using templates, consider these best practices:
 3. **Template Content Verification**: For critical applications, consider fetching the template content beforehand and comparing it against the returned page object to verify template processing completion.
 
 4. **Callback Usage**: Use the `onTemplatePageCreated` callback for custom verification logic, such as:
-
    - Checking specific properties or content
    - Implementing retry logic
    - Logging template processing status

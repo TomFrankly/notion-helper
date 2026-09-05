@@ -5,7 +5,7 @@ import { isValidURL, isValidUUID, validateDate, validateStringLength, validateAr
 /**
  * Object with methods for constructing Notion page metadata, including parent, page, block, property, cover, and icon.
  *
- * Parent creates a parent object. Page, block, and property create ID objects. Cover creates an external image object, while icon can create an external image object or an emoji object.
+ * Parent creates a parent object. Page, block, and property create ID objects. Cover creates an external image object from a url, while icon can create an external image object, emoji object, or native Notion icon object from a provided string (or pass and return a fully-formed icon object).
  *
  * @namespace
  */
@@ -112,7 +112,7 @@ export const page_meta = {
         /**
          * Creates an icon object.
          * @function
-         * @param {string} value - The icon value (URL for "external" or emoji character).
+         * @param {string|Object} value - An emoji character, a URL for an externally-hosted image file, a non-URL string representing a native Notion icon, or a fully-formed icon object.
          * @returns {Object} An icon metadata object.
          */
         createMeta: (value) => setIcon(value),
@@ -150,7 +150,8 @@ export const page_meta = {
          *   - A fully-formed template object, e.g.:
          *     {
          *       type: "template_id",
-         *       template_id: "your-template-id"
+         *       template_id: "your-template-id",
+         *       timezone: "America/New_York",
          *     }
          *   - A string value:
          *     - "none": Do not use a template.
@@ -365,11 +366,21 @@ export function cover(url) {
 /**
  * Creates an icon object.
  * @memberof PageShorthand
- * @param {string} url - The URL of the icon image or an emoji character.
+ * @param {string|Object} value - An emoji character, a URL for an externally-hosted image file, a non-URL string representing a native Notion icon, or a fully-formed icon object.
  * @returns {Object} An icon object.
  */
-export function icon(url) {
-    return page_meta.icon.createMeta(url);
+export function icon(value) {
+    return page_meta.icon.createMeta(value);
+}
+
+/**
+ * Creates a template object.
+ * @memberof PageShorthand
+ * @param {(Object|string)} templateChoice - The template to use for the page.
+ * @returns {Object} A template object.
+ */
+export function template(templateChoice) {
+    return page_meta.template.createMeta(templateChoice);
 }
 
 /**
@@ -905,6 +916,26 @@ export const page_props = {
             url: validateValue(value, "url"),
         }),
     },
+
+    /**
+     * Methods for Verification proeprties (can only be set/updated within wiki databases).
+     * 
+     * @namespace
+     * @property {string} type - the data type the property accepts.
+     */
+    verification: {
+        type: "string",
+        returns: "string",
+        /**
+         * Sets a Verification property's value.
+         * @function
+         * @param {string|Object} value - a valid verification object, or a string reading either "verified" or "unverified". Pass a valid verification object if you want to include a date of verification.
+         * @returns {Object} a verification object.
+         */
+        setProp: (value) => ({
+            verification: validateValue(value, "verification")
+        })
+    }
 };
 
 /*
@@ -1057,6 +1088,16 @@ export function url(value) {
     return page_props.url.setProp(value);
 }
 
+/** 
+ * Creates a Verification property object
+ * @memberof PropertyShorthand
+ * @param {string|Object} value - A valid verification object, or a string reading either "verified" or "unverified".
+ * @returns {Object} A verification object
+ */
+export function verification(value) {
+    return page_props.verification.setProp(value);
+}
+
 /**
  * Validates values passed to the setProp() methods above. Performs some transformation in certain cases.
  *
@@ -1179,6 +1220,34 @@ function validateValue(value, type) {
         } else {
             console.warn(`Invalid UUID. Returning null. Passed value: ${value}`);
             return null;
+        }
+    }
+
+    if (type === "verification") {
+        if (typeof value !== "object" && typeof value !== string) {
+            console.warn(`Invalid Verification object. Returning null.`);
+            return null
+        }
+
+        if (typeof value === "object") {
+            const validStates = ["verified", "unverified"];
+            if (!value.hasOwnProperty("state") || !validStates.includes(value.state)) {
+                console.warn(`Invalid verification state. Must be one of ${validStates.join(", ")}. Returning null.`);
+                return null;
+            }
+       
+            return value
+        }
+
+        if (typeof value === "string") {
+            if (value !== "verified" && value !== "unverified") {
+                console.warn(`Invalid string passed for verification property. Must be either "verified" or "unverified". Returning null.`)
+                return null;
+            }
+
+            return {
+                state: value
+            }
         }
     }
 

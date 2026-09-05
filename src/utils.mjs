@@ -36,6 +36,11 @@ export function isValidURL(string) {
  * @returns {boolean}
  */
 export function isValidUUID(string) {
+    if (typeof string !== "string") {
+        console.warn(`Invalid input sent to isValidUUID(). Expected a string, got: ${typeof string}. String: ${string}.`);
+        return false;
+    }
+
     const regex = /^[0-9a-fA-F]{8}(-?[0-9a-fA-F]{4}){3}-?[0-9a-fA-F]{12}$/;
     return regex.test(string);
 }

@@ -71,12 +71,12 @@ import NotionHelper from "notion-helper";
 // Usage example with direct block API method
 
 const paragraph = NotionHelper.block.paragraph.createBlock(
-  "My mistake. Table's cold, anyway."
+  "My mistake. Table's cold, anyway.",
 );
 
 // Usage example with shorthand function
 const paragraph = NotionHelper.paragraph(
-  "I'd try the lounge at the Caesar's. It gets busy after three o'clock."
+  "I'd try the lounge at the Caesar's. It gets busy after three o'clock.",
 );
 ```
 
@@ -87,7 +87,7 @@ import { paragraph } from "notion-helper";
 
 // Usage example
 const paragraph = paragraph(
-  "I'd try the lounge at the Caesar's. It gets busy after three o'clock."
+  "I'd try the lounge at the Caesar's. It gets busy after three o'clock.",
 );
 ```
 
@@ -220,7 +220,7 @@ const response = await appendBlocks({
 });
 ```
 
-If you'd like to append blocks after a _specific_ block on a page (or in another block's `children` array), you can also include an `after` property with the block ID. Notion Helper still handles chunking here; in the case of multiple API calls, it intelligently changes the block ID in `after` between requests so their sequence is not broken.
+If you'd like to append blocks after a _specific_ block on a page (or in another block's `children` array), you can also include an `position` property with the block ID. Notion Helper still handles chunking here; in the case of multiple API calls, it intelligently changes the block ID in `position` between requests so their sequence is not broken. See Notion's [Controlling Insert Position](https://developers.notion.com/reference/patch-block-children#controlling-insert-position) documentation for more details on the `position` object.
 
 ### Alternative HTTP Clients
 
@@ -233,7 +233,7 @@ In both of these cases, you can provide an `apiCall` property (instead of a `cli
 The `apiCall` function receives an options object with a `type` property and a `data` property:
 
 - `type: 'create_page'` with `data` containing the page object (parent, properties, etc.)
-- `type: 'append_blocks'` with `data` containing `{ block_id, children, after }`
+- `type: 'append_blocks'` with `data` containing `{ block_id, children, position }`
 
 This unified approach allows you to use a single callback function for both operations.
 
@@ -266,10 +266,10 @@ const apiCall = async ({ type, data }) => {
       })
       .json();
   } else if (type === "append_blocks") {
-    const { block_id, children, after } = data;
+    const { block_id, children, position } = data;
     return await ky
       .patch(`https://api.notion.com/v1/blocks/${block_id}/children`, {
-        json: { children, ...(after && { after }) },
+        json: { children, ...(position && { position }) },
         headers: {
           Authorization: `Bearer ${secret}`,
           "Notion-Version": "2025-09-03",
@@ -331,7 +331,7 @@ const builder = createNotionBuilder()
   .title("Name", "Walk the dog")
   .date("Due", "2025-10-29")
   .paragraph(
-    "I need to walk Mrs. Nesbit's dog today. The leash is hanging near the door."
+    "I need to walk Mrs. Nesbit's dog today. The leash is hanging near the door.",
   )
   .build();
 
@@ -359,7 +359,7 @@ const builder = createNotionBuilder()
     (page, sentence, index) => {
       page.numberedListItem(`This is numbered sentence #${index + 1}`);
     },
-    Array.from({ length: 200 }, (_, index) => index)
+    Array.from({ length: 200 }, (_, index) => index),
   )
   .build();
 
@@ -407,7 +407,7 @@ However, you can call `createNotionBuilder({ strict: true })` if you'd like to e
   - `blockId(blockId)` (for block operations)
   - `propertyId(propertyId)` (for property operations)
 - Icon
-  - `icon(emojiOrUrlOrFile)`
+  - `icon(emojiOrUrlOrIconOrFileOrIconObject)`
 - Cover
   - `cover(urlOrFile)`
 - Templates
@@ -659,7 +659,7 @@ async function verifyTemplateReady({
     !template.hasOwnProperty("type")
   ) {
     throw new Error(
-      'Template verification failed: template object is invalid or missing required "type" property'
+      'Template verification failed: template object is invalid or missing required "type" property',
     );
   }
 
@@ -670,7 +670,7 @@ async function verifyTemplateReady({
     templateId = template.template_id;
     if (!templateId) {
       throw new Error(
-        'Template verification failed: Missing template_id for template.type "template_id"'
+        'Template verification failed: Missing template_id for template.type "template_id"',
       );
     }
     console.log(`   Using template_id: ${templateId}`);
@@ -685,29 +685,29 @@ async function verifyTemplateReady({
         templateId = defaultTemplate.id;
         if (!templateId) {
           throw new Error(
-            "Template verification failed: Default template found but it has no id"
+            "Template verification failed: Default template found but it has no id",
           );
         }
         console.log(
-          `   Found default template: ${defaultTemplate.name} (${templateId})`
+          `   Found default template: ${defaultTemplate.name} (${templateId})`,
         );
       } else {
         throw new Error(
-          "Template verification failed: No default template found in the provided data source"
+          "Template verification failed: No default template found in the provided data source",
         );
       }
     } catch (error) {
       throw new Error(
-        `Template verification failed: Could not fetch templates (${error.message})`
+        `Template verification failed: Could not fetch templates (${error.message})`,
       );
     }
   } else if (template.type === "none") {
     throw new Error(
-      'Template verification failed: Template type is "none", nothing to verify.'
+      'Template verification failed: Template type is "none", nothing to verify.',
     );
   } else {
     throw new Error(
-      `Template verification failed: Unknown template type "${template.type}"`
+      `Template verification failed: Unknown template type "${template.type}"`,
     );
   }
 
@@ -722,7 +722,7 @@ async function verifyTemplateReady({
     console.log(`   Template has ${templateBlockCount} top-level blocks`);
   } catch (error) {
     throw new Error(
-      `Template verification failed: Could not fetch template blocks (${error.message})`
+      `Template verification failed: Could not fetch template blocks (${error.message})`,
     );
   }
 
@@ -744,14 +744,14 @@ async function verifyTemplateReady({
       throw new Error(
         `Template verification failed: Could not fetch page blocks for verification attempt ${
           retries + 1
-        } (${error.message})`
+        } (${error.message})`,
       );
     }
 
     console.log(
       `   Attempt ${retries + 1}/${
         maxRetries + 1
-      }: Page has ${currentBlockCount} blocks`
+      }: Page has ${currentBlockCount} blocks`,
     );
 
     if (currentBlockCount >= templateBlockCount) {
@@ -765,7 +765,7 @@ async function verifyTemplateReady({
   if (!verified) {
     throw new Error(
       `Template verification failed after ${maxRetries + 1} attempts. ` +
-        `Expected at least ${templateBlockCount} blocks but found ${currentBlockCount}.`
+        `Expected at least ${templateBlockCount} blocks but found ${currentBlockCount}.`,
     );
   }
 }
@@ -778,7 +778,7 @@ const result = await createPage({
   onTemplatePageCreated: async ({ page, template, fallbackWaitMs }) => {
     console.log(`✓ Template page created: ${page.id}`);
     console.log(
-      `✓ Page URL: https://www.notion.so/${page.id.replace(/-/g, "")}`
+      `✓ Page URL: https://www.notion.so/${page.id.replace(/-/g, "")}`,
     );
 
     // Verify template is ready before appending children
@@ -882,7 +882,7 @@ import { audio } from "notion-helper";
 
 // External URL (string)
 const block1 = audio(
-  "https://thomasjfrank.com/wp-content/uploads/2025/11/Voice-Sample3.mp3"
+  "https://thomasjfrank.com/wp-content/uploads/2025/11/Voice-Sample3.mp3",
 );
 
 // Options object with URL
@@ -957,7 +957,7 @@ import {
 
 // Single string
 const block1 = bulletedListItem(
-  "You're both of you nuts. I know more about casino security than any man alive. I invented it!"
+  "You're both of you nuts. I know more about casino security than any man alive. I invented it!",
 );
 
 // Array of strings
@@ -985,7 +985,7 @@ const block5 = bulletedListItem({
     "I still owe you for the thing with the guy in the place, and I'll never forget it.",
   children: [
     paragraph(
-      "You could try the lounge at the Caesar's. I hear it gets busy after three o'clock."
+      "You could try the lounge at the Caesar's. I hear it gets busy after three o'clock.",
     ),
     bulletedListItem("Haha, he's a balloon boy!"),
   ],
@@ -1004,7 +1004,7 @@ import { callout, buildRichTextObj, paragraph } from "notion-helper";
 
 // Single string
 const block1 = callout(
-  "You're both of you nuts. I know more about casino security than any man alive. I invented it!"
+  "You're both of you nuts. I know more about casino security than any man alive. I invented it!",
 );
 
 // Options object with icon (emoji)
@@ -1190,7 +1190,7 @@ import { file, buildRichTextObj } from "notion-helper";
 
 // External URL (string)
 const block1 = file(
-  "https://collegeinfogeek.com/wp-content/uploads/2015/01/10steps-reddit.pdf"
+  "https://collegeinfogeek.com/wp-content/uploads/2015/01/10steps-reddit.pdf",
 );
 
 // Options object with URL
@@ -1230,7 +1230,7 @@ import { heading1, buildRichTextObj, paragraph } from "notion-helper";
 
 // Single string
 const block1 = heading1(
-  "You're both of you nuts. I know more about casino security than any man alive. I invented it!"
+  "You're both of you nuts. I know more about casino security than any man alive. I invented it!",
 );
 
 // Array of strings
@@ -1259,7 +1259,7 @@ const block5 = heading1({
   is_toggleable: true,
   children: [
     paragraph(
-      "You could try the lounge at the Caesar's. I hear it gets busy after three o'clock."
+      "You could try the lounge at the Caesar's. I hear it gets busy after three o'clock.",
     ),
   ],
 });
@@ -1314,7 +1314,7 @@ import { heading3, buildRichTextObj, paragraph } from "notion-helper";
 
 // Single string
 const block1 = heading3(
-  "I still owe you for the thing with the guy in the place, and I'll never forget it."
+  "I still owe you for the thing with the guy in the place, and I'll never forget it.",
 );
 
 // Array of strings
@@ -1398,7 +1398,7 @@ import {
 
 // Single string
 const block1 = numberedListItem(
-  "You're both of you nuts. I know more about casino security than any man alive. I invented it!"
+  "You're both of you nuts. I know more about casino security than any man alive. I invented it!",
 );
 
 // Array of strings
@@ -1426,7 +1426,7 @@ const block5 = numberedListItem({
     "I still owe you for the thing with the guy in the place, and I'll never forget it.",
   children: [
     paragraph(
-      "You could try the lounge at the Caesar's. I hear it gets busy after three o'clock."
+      "You could try the lounge at the Caesar's. I hear it gets busy after three o'clock.",
     ),
     numberedListItem("Haha, he's a balloon boy!"),
   ],
@@ -1445,7 +1445,7 @@ import { paragraph, buildRichTextObj } from "notion-helper";
 
 // Single string
 const block1 = paragraph(
-  "You're both of you nuts. I know more about casino security than any man alive. I invented it!"
+  "You're both of you nuts. I know more about casino security than any man alive. I invented it!",
 );
 
 // Array of strings (combined into a single paragraph)
@@ -1472,7 +1472,7 @@ const block5 = paragraph({
     "I still owe you for the thing with the guy in the place, and I'll never forget it.",
   children: [
     paragraph(
-      "You could try the lounge at the Caesar's. I hear it gets busy after three o'clock."
+      "You could try the lounge at the Caesar's. I hear it gets busy after three o'clock.",
     ),
     paragraph("Haha, he's a balloon boy!"),
   ],
@@ -1485,7 +1485,7 @@ const block6 = paragraph(
     buildRichTextObj("All right chaps. Hang on to your knickers.", {
       italic: true,
     }),
-  ].flat()
+  ].flat(),
 );
 ```
 
@@ -1498,7 +1498,7 @@ import { pdf, buildRichTextObj } from "notion-helper";
 
 // External URL (string)
 const block1 = pdf(
-  "https://collegeinfogeek.com/wp-content/uploads/2015/01/10steps-reddit.pdf"
+  "https://collegeinfogeek.com/wp-content/uploads/2015/01/10steps-reddit.pdf",
 );
 
 // Options object with URL
@@ -1537,7 +1537,7 @@ import { quote, buildRichTextObj, paragraph } from "notion-helper";
 
 // Single string
 const block1 = quote(
-  "You're both of you nuts. I know more about casino security than any man alive. I invented it!"
+  "You're both of you nuts. I know more about casino security than any man alive. I invented it!",
 );
 
 // Array of strings
@@ -1565,7 +1565,7 @@ const block5 = quote({
     "I still owe you for the thing with the guy in the place, and I'll never forget it.",
   children: [
     paragraph(
-      "You could try the lounge at the Caesar's. I hear it gets busy after three o'clock."
+      "You could try the lounge at the Caesar's. I hear it gets busy after three o'clock.",
     ),
     quote("Haha, he's a balloon boy!"),
   ],
@@ -1699,7 +1699,7 @@ import { toDo, buildRichTextObj, paragraph } from "notion-helper";
 
 // Single string (unchecked by default)
 const block1 = toDo(
-  "You're both of you nuts. I know more about casino security than any man alive. I invented it!"
+  "You're both of you nuts. I know more about casino security than any man alive. I invented it!",
 );
 
 // Array of strings
@@ -1753,7 +1753,7 @@ import { toggle, buildRichTextObj, paragraph, heading2 } from "notion-helper";
 
 // Single string
 const block1 = toggle(
-  "You're both of you nuts. I know more about casino security than any man alive. I invented it!"
+  "You're both of you nuts. I know more about casino security than any man alive. I invented it!",
 );
 
 // Array of strings
@@ -1781,7 +1781,7 @@ const block5 = toggle({
     "I still owe you for the thing with the guy in the place, and I'll never forget it.",
   children: [
     paragraph(
-      "You could try the lounge at the Caesar's. I hear it gets busy after three o'clock."
+      "You could try the lounge at the Caesar's. I hear it gets busy after three o'clock.",
     ),
     heading2("Haha, he's a balloon boy!"),
     toggle("What, did you guys get a group rate or something?"),
@@ -2003,6 +2003,32 @@ const icon2 = icon("🚀");
 // External image URL
 const icon3 = page_meta.icon.createMeta("https://example.com/icon.png");
 const icon4 = icon("https://example.com/icon.png");
+
+// Native Notion icon (must be a valid icon name from Notion's icon list. To also set a color, use a full icon object instead, as shown below.)
+const icon5 = page_meta.icon.createMeta("alien");
+const icon6 = icon("alien");
+
+// Notion file upload (images only. Pass a UUID representing the ID of the file upload. Passing a UUID as a string makes notion-helper assume it's a file upload. For custom emoji, use a full icon object, as shown below.)
+const icon7 = page_meta.icon.createMeta("3d22de3c2996819ba914f6e045f8de32");
+const icon8 = icon("3d22de3c2996819ba914f6e045f8de32");
+
+// Full icon object
+// Setting a custom emoji as a page icon
+const icon9 = page_meta.icon.createMeta({
+  type: "custom_emoji",
+  custom_emoji: {
+    id: "45ce454c-d427-4f53-9489-e5d0f3d1db6b",
+  },
+});
+
+// Setting a native icon with a custom color as a page icon
+const icon10 = icon({
+  type: "icon",
+  icon: {
+    name: "cat",
+    color: "orange",
+  },
+});
 ```
 
 ### Cover
@@ -2198,7 +2224,7 @@ const richTextProp5 = richText(
     buildRichTextObj("Bold and ", { bold: true }),
     buildRichTextObj("italic text", { italic: true }),
     buildRichTextObj(" with color", { color: "blue" }),
-  ].flat()
+  ].flat(),
 );
 
 // Mixed plain strings and formatted objects
@@ -2208,7 +2234,7 @@ const richTextProp6 = richText(
     buildRichTextObj("Bold text. ", { bold: true }),
     buildRichTextObj("Italic text. ", { italic: true }),
     buildRichTextObj("Colored text", { color: "red_background" }),
-  ].flat()
+  ].flat(),
 );
 
 // With URL link
@@ -2216,7 +2242,7 @@ const richTextProp7 = richText(
   buildRichTextObj("Flylighter - Notion Web Clipper", {
     bold: true,
     url: "https://www.flylighter.com",
-  })
+  }),
 );
 ```
 
@@ -2257,10 +2283,10 @@ import { page_props, files } from "notion-helper";
 
 // Single URL string
 const filesProp = page_props.files.setProp(
-  "https://collegeinfogeek.com/wp-content/uploads/2015/01/10steps-reddit.pdf"
+  "https://collegeinfogeek.com/wp-content/uploads/2015/01/10steps-reddit.pdf",
 );
 const filesProp2 = files(
-  "https://collegeinfogeek.com/wp-content/uploads/2015/01/10steps-reddit.pdf"
+  "https://collegeinfogeek.com/wp-content/uploads/2015/01/10steps-reddit.pdf",
 );
 
 // Array of URLs
@@ -2373,7 +2399,7 @@ import { buildRichTextObj } from "notion-helper";
 
 // Simple string
 const richText1 = buildRichTextObj(
-  "You're both of you nuts. I know more about casino security than any man alive. I invented it!"
+  "You're both of you nuts. I know more about casino security than any man alive. I invented it!",
 );
 
 // With annotations
@@ -2397,7 +2423,7 @@ const richText4 = buildRichTextObj(
   "I still owe you for the thing with the guy in the place, and I'll never forget it.",
   {
     url: "https://example.com",
-  }
+  },
 );
 
 // With annotations and hyperlink
@@ -2409,7 +2435,7 @@ const richText5 = buildRichTextObj(
       color: "blue",
     },
     url: "https://example.com",
-  }
+  },
 );
 
 // Multiple annotations
@@ -2435,7 +2461,7 @@ const richText8 = buildRichTextObj(
     type: "user",
     user: { id: "01b92c2b5a38495da82b922f47b3a308" },
   },
-  { type: "mention" }
+  { type: "mention" },
 );
 
 // Date mention
@@ -2444,7 +2470,7 @@ const richText9 = buildRichTextObj(
     type: "date",
     date: { start: "2025-01-01" },
   },
-  { type: "mention" }
+  { type: "mention" },
 );
 
 // Date range mention
@@ -2453,7 +2479,7 @@ const richText10 = buildRichTextObj(
     type: "date",
     date: { start: "2025-01-01", end: "2025-01-07" },
   },
-  { type: "mention" }
+  { type: "mention" },
 );
 
 // Page mention
@@ -2462,7 +2488,7 @@ const richText11 = buildRichTextObj(
     type: "page",
     page: { id: "2992de3c299681f8b399f37507705c99" },
   },
-  { type: "mention" }
+  { type: "mention" },
 );
 
 // Database mention
@@ -2471,7 +2497,7 @@ const richText12 = buildRichTextObj(
     type: "database",
     database: { id: "2992de3c29968196a328d4e3369de628" },
   },
-  { type: "mention" }
+  { type: "mention" },
 );
 ```
 
@@ -2602,7 +2628,7 @@ import { validateAndSplitBlock, paragraph } from "notion-helper";
 
 // Block with long text - automatically splits into multiple rich text objects
 const longBlock = paragraph(
-  "This is a very long paragraph that exceeds the character limit..."
+  "This is a very long paragraph that exceeds the character limit...",
 );
 
 const validated = validateAndSplitBlock(longBlock);

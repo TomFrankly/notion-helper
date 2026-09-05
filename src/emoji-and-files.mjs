@@ -2,12 +2,15 @@ import { isSingleEmoji, isValidURL, validateImageURL, isValidUUID } from "./util
 
 /**
  * 
- * @param {string} value - either an emoji character or a URL for an externally-hosted image file. 
+ * @param {string|Object} value - An emoji character, a URL for an externally-hosted image file, a non-URL string representing a native Notion icon, or a fully-formed icon object.
  * @returns {Object} - An object representing the icon.
  */
 export function setIcon(value) {
-    if (typeof value !== "string") {
-        return {}
+    if (typeof value !== "string" && (typeof value !== "object" || value === null)) {
+        return {};
+    }
+    if (typeof value === "object" && value !== null) {
+        return value;
     }
     
     const isEmoji = isSingleEmoji(value)
@@ -20,6 +23,8 @@ export function setIcon(value) {
         return createEmoji(value)
     } else if (isUUID) {
         return createFile(value)
+    } else if (value !== "" && value.length >= 1) {
+        return createNotionIcon(value)
     } else {
         return undefined
     }
@@ -50,6 +55,21 @@ export function createEmoji(emoji) {
     return {
         type: "emoji",
         emoji: emoji
+    }
+}
+
+/**
+ * Creates a representation of a native Notion icon.
+ * 
+ * @param {string} icon - The Native Notion icon.
+ * @returns {Object} An object contain the native Notion icon.
+ */
+export function createNotionIcon(icon) {
+    return {
+        type: "icon",
+        icon: {
+            name: icon
+        }
     }
 }
 

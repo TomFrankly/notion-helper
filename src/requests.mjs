@@ -1,4 +1,4 @@
-import { getDepth, getTotalCount, getLongestArray, getPayloadSize } from "./utils.mjs"
+import { getDepth, getTotalCount, getLongestArray, getPayloadSize, isValidUUID } from "./utils.mjs"
 import CONSTANTS from "./constants.mjs";
 
 /**
@@ -390,7 +390,8 @@ export const request = {
              * @function
              * @param {Object} options - The options for appending blocks.
              * @param {string} options.block_id - The ID of the parent block to append children to. Can be a page ID.
-             * @param {string} options.after - The ID of an existing block after which to append the children.
+             * @param {Object} options.position - The position after which to append the children. See: https://developers.notion.com/reference/patch-block-children#controlling-insert-position. Defaults to { "type": "end" }. Can also be { "type": "start" }, which will append the children to the start of the parent block, or { "type": "after_block", "after_block": { "id": "block-id" } }, which will append the children after the specified block.
+             * @param {string} options.after - The ID of an existing block after which to append the children. [Deprecated. Use position instead. Requests that contain both position and after will throw an error.]
              * @param {Array<Object>} options.children - An array of child blocks to append.
              * @param {Object} [options.client] - The Notion client object. Either this or apiCall must be provided.
              * @param {Function} [options.apiCall] - A custom function for making API calls. Receives `{ type: 'append_blocks', data: { block_id, children, after } }` as argument. Either this or client must be provided.
@@ -413,11 +414,11 @@ export const request = {
              * const NOTION_TOKEN = 'your-notion-token';
              *
              * const apiCall = async ({ type, data }) => {
-             *   const { block_id, children, after } = data;
+             *   const { block_id, children, position } = data;
              *   const response = await ky.patch(
              *     `https://api.notion.com/v1/blocks/${block_id}/children`,
              *     {
-             *       json: { children, ...(after && { after }) },
+             *       json: { children, ...(position && { position }) },
              *       headers: {
              *         'Authorization': `Bearer ${NOTION_TOKEN}`,
              *         'Notion-Version': '2025-09-03',
@@ -495,6 +496,7 @@ export const request = {
                     block_id,
                     children,
                     after = null,
+                    position = null,
                     client,
                     apiCall,
                     getResults = (response) => response.results,
@@ -521,8 +523,35 @@ export const request = {
                         }
                         
                        
-                        let currentAfter = after;
-                        const shouldChainChunks = after !== null && after !== undefined;
+                        let currentPosition;
+
+                        if (after !== null && after !== undefined && position !== null && position !== undefined) {
+                            
+                            if (position.type === "after_block" && position.after_block.id && position.after_block.id === after) {
+                                console.warn("Both after and position parameters were provided, which is not allowed by the Notion API. However, the provided after parameter's block ID matches the position parameter's block ID, so the position parameter will be used and the request will proceed. Consider using only the position parameter in the future.");
+                                currentPosition = position;
+                            } else {
+                                throw new Error("Both after and position cannot be provided. Use only one.");
+                            }
+                        }
+
+                        if (after !== null && after !== undefined) {
+                            currentPosition = { type: "after_block", after_block: { id: after } };
+                        } else if (position !== null && position !== undefined) {
+                            
+                            if (isValidUUID(position)) {
+                                currentPosition = { type: "after_block", after_block: { id: position } };
+                            } else if (position === "start") {
+                                currentPosition = { type: "start"}
+                            } else if (position === "end") {
+                                currentPosition = { type: "end"} 
+                            } else {
+                                currentPosition = position;
+                            }
+                            
+                        } else {
+                            currentPosition = { type: "end" };
+                        }
                         
                         for (let chunk of chunks) {
 
@@ -606,7 +635,7 @@ export const request = {
                                 callingFunction = async function (
                                     block_id,
                                     children,
-                                    after
+                                    position
                                 ) {
                                     apiCallCount++;
                                     try {
@@ -614,7 +643,7 @@ export const request = {
                                             {
                                                 block_id: block_id,
                                                 children: children,
-                                                ...(after && after !== null && { after })
+                                                ...(position && position !== null && { position })
                                             }
                                         );
                                     } catch (error) {
@@ -625,18 +654,18 @@ export const request = {
                                     }
                                 };
                             } else if (typeof apiCall === "function") {
-                                callingFunction = async function (block_id, children, after) {
+                                callingFunction = async function (block_id, children, position) {
                                     apiCallCount++;
                                     try {
 
                                         try {
                                             return await apiCall({ 
                                                 type: 'append_blocks', 
-                                                data: { block_id, children, after } 
+                                                data: { block_id, children, position } 
                                             });
                                         } catch (error) {
                                             
-                                            return await apiCall(block_id, children, after);
+                                            return await apiCall(block_id, children, position);
                                         }
                                     } catch (error) {
                                         console.error(
@@ -659,7 +688,7 @@ export const request = {
                             const response = await callingFunction(
                                 block_id,
                                 chunk,
-                                currentAfter
+                                currentPosition
                             );
                             
                             if (debug) {
@@ -670,8 +699,12 @@ export const request = {
                                 allResponses.push(response);
                                 const results = getResults(response);
 
-                                if (shouldChainChunks && results && results.length > 0) {
-                                    currentAfter = results[results.length - 1].id;
+                                if (results && results.length > 0) {
+                                    currentPosition = {
+                                        type: "after_block",
+                                        after_block: { id: results[results.length - 1].id }
+                                    };
+                               
                                 }
 
                                 for (let [index, block] of chunk.entries()) {

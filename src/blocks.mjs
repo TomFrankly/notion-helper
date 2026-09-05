@@ -268,7 +268,7 @@ export const block = {
          * @function
          * @param {string|string[]|Object} options - A string, an array of strings, or an options object representing the callout content.
          * @param {string|string[]|Array<Object>} [options.rich_text=[]] - The content as a string, an array of strings, or an array of rich text objects.
-         * @param {string} [options.icon=""] - An optional icon value (URL for "external" or emoji character for "emoji").
+         * @param {string} [options.icon=""] - An optional icon value. Can be an emoji character, a URL for an externally-hosted image file, a non-URL string representing a native Notion icon, or a fully-formed icon object.
          * @param {Array<Object>} [options.children=[]] - An array of child block objects.
          * @param {string} [options.color="default"] - Color for the callout background.
          * @returns {Object} A callout block object compatible with Notion's API.
@@ -667,26 +667,64 @@ export const block = {
          * Creates an embed block.
          *
          * @function
-         * @param {string|Object} options - A string representing the URL to be embedded, or an options object.
+         * @param {string|Object} options - A string representing the URL to be embedded, a UUID that represents a file upload, or an options object.
          * @param {string} options.url - The URL to be embedded.
+         * @param {Object} options.file_upload 
          * @returns {Object} An embed block object compatible with Notion's API.
          * @example
-         * // Use with a string
+         * // Use with a URL string
          * const simpleEmbed = block.embed.createBlock("https://www.youtube.com/watch?v=ec5m6t77eYM");
+         * 
+         * // Use with a UUID string (file upload)
+         * const simpleFileUploadEmbed = block.embed.createBlock("24142df2c64080g28b18edb72f486550")
          *
-         * // Use with options object
+         * // Use with options object with URL
          * const complexEmbed = block.embed.createBlock({
          *   url: "https://www.youtube.com/watch?v=ec5m6t77eYM"
          * });
+         * 
+         * // Use with options object with file upload
+         * const complexFileUploadEmbed = block.embed.createBlock({
+         *  type: "file_upload",
+         *  file_upload: {
+         *      id: "24142df2c64080g28b18edb72f486550"
+         *  }
+         * })
          */
         createBlock: (options) => {
-            const url = typeof options === "string" ? options : options.url;
-            return {
-                type: "embed",
-                embed: {
-                    url: url,
-                },
-            };
+            if (typeof options !== "string" && (typeof options !== "object" || options === null)) {
+                return null;
+            }
+
+            if (typeof options === "object" && options !== null) {
+                return {
+                    type: "embed",
+                    embed: options,
+                }
+            } else if (typeof options === "string") {
+                if (isValidURL(options)) {
+                    return {
+                        type: "embed",
+                        embed: {
+                            url: options
+                        }
+                    }
+                } else if (isValidUUID(options)) {
+                    return {
+                        type: "embed",
+                        embed: {
+                            type: "file_upload",
+                            file_upload: {
+                                id: options
+                            }
+                        }
+                    }
+                } else {
+                    return null
+                }
+            } else {
+                return null
+            }
         },
     },
 
@@ -967,6 +1005,71 @@ export const block = {
     },
 
     /**
+     * Methods for heading_4 blocks.
+     *
+     * @namespace
+     * @property {boolean} supports_children - Indicates if the block supports child blocks.
+     */
+    heading_4: {
+        /**
+         * Indicates if the block supports child blocks.
+         * @type {boolean}
+         */
+        supports_children: true,
+        /**
+         * Creates a heading_4 block.
+         *
+         * Adding children will coerce headings to toggle headings.
+         *
+         * @function
+         * @param {string|string[]|Object} options - A string, an array of strings, or an options object representing the heading content.
+         * @param {string|string[]|Array<Object>} [options.rich_text=[]] - The content as a string, an array of strings, or an array of rich text objects.
+         * @param {string} [options.color="default"] - Color for the heading text.
+         * @param {boolean} [options.is_toggleable=false] - Whether the heading is toggleable.
+         * @param {Array<Object>} [options.children=[]] - An array of child block objects.
+         * @returns {Object} A heading_4 block object compatible with Notion's API.
+         * @example
+         * // Use with a string
+         * const simpleHeading = block.heading_4.createBlock("Simple Heading");
+         *
+         * // Use with options object
+         * const complexHeading = block.heading_4.createBlock({
+         *   rich_text: "Complex Heading",
+         *   color: "red",
+         *   is_toggleable: true,
+         *   children: [
+         *     // Child blocks would go here
+         *   ]
+         * });
+         */
+        createBlock: (options) => {
+            let rich_text, color, is_toggleable, children;
+            if (typeof options === "string" || Array.isArray(options)) {
+                rich_text = options;
+                color = "default";
+                is_toggleable = false;
+                children = [];
+            } else {
+                ({
+                    rich_text = [],
+                    color = "default",
+                    is_toggleable = false,
+                    children = [],
+                } = options);
+            }
+            return {
+                type: "heading_4",
+                heading_4: {
+                    rich_text: enforceRichText(rich_text),
+                    color: color,
+                    is_toggleable: is_toggleable,
+                    ...(children.length > 0 && { children }),
+                },
+            };
+        },
+    },
+
+    /**
      * Methods for image blocks.
      *
      * @namespace
@@ -1123,6 +1226,7 @@ export const block = {
          * @param {string|string[]|Array<Object>} [options.rich_text=[]] - The content as a string, an array of strings, or an array of rich text objects.
          * @param {Array<Object>} [options.children=[]] - An array of child block objects.
          * @param {string} [options.color="default"] - Color for the text.
+         * @param {string|Object} [options.icon=null] - Emoji text, native Notion icon string name, external image URL, or valid icon object for paragraph icon. Can only be set if the paragraph block is a direct child of a Tab block.
          * @returns {Object} A paragraph block object compatible with Notion's API.
          * @example
          * // Direct use with a string
@@ -1141,16 +1245,18 @@ export const block = {
          * });
          */
         createBlock: (options) => {
-            let rich_text, children, color;
+            let rich_text, children, color, icon;
             if (typeof options === "string" || Array.isArray(options)) {
                 rich_text = options;
                 children = [];
                 color = "default";
+                icon = null;
             } else {
                 ({
                     rich_text = [],
                     children = [],
                     color = "default",
+                    icon = null
                 } = options);
             }
 
@@ -1162,6 +1268,7 @@ export const block = {
                             ? buildRichTextObj("")
                             : enforceRichText(rich_text),
                     color: color,
+                    ...(icon !== undefined && icon !== null ? { icon: setIcon(icon) } : {}),
                     ...(children.length > 0 && { children }),
                 },
             };
@@ -1302,6 +1409,44 @@ export const block = {
                     ...(children.length > 0 && { children }),
                 },
             };
+        },
+    },
+
+    /**
+     * Methods for tab blocks.
+     *
+     * @namespace
+     * @property {boolean} supports_children - Indicates if the block supports child blocks.
+     */
+    tab: {
+        /**
+         * Indicates if the block supports child blocks.
+         * @type {boolean}
+         */
+        supports_children: true,
+        /**
+         * Creates a tab block.
+         *
+         * @function
+         * @param {Array<Object>} [options=[]] - An array of child blocks. Each child block must be a paragraph block. The paragraph block's rich text will set the tab's title, and its optional icon property will set the tab's icon.
+         * @returns {Object} A tab block object compatible with Notion's API.
+         * @example
+         * const tabBlock = block.tab.createBlock([childBlocks]);
+         */
+        createBlock: (options) => {
+            let children;
+            if (Array.isArray(options)) {
+                children = options
+            } else {
+                children = [];
+            }
+
+            return {
+                type: "tab",
+                tab: {
+                    children: children
+                }
+            }
         },
     },
 
@@ -1820,7 +1965,7 @@ export function divider() {
 /**
  * Creates an embed block.
  * @memberof BlockShorthand
- * @param {string|Object} options - A string representing the URL to be embedded, or an options object.
+ * @param {string|Object} options - A string representing the URL or UUID representing a file upload to be embedded, or an options object.
  * @see block.embed for full documentation
  * @returns {Object} An embed block.
  */
@@ -1870,6 +2015,17 @@ export function heading2(options) {
  */
 export function heading3(options) {
     return block.heading_3.createBlock(options);
+}
+
+/**
+ * Creates a heading_4 block.
+ * @memberof BlockShorthand
+ * @param {string|string[]|Object} options - A string, an array of strings, or an options object representing the heading content.
+ * @see block.heading_4 for full documentation
+ * @returns {Object} A heading_4 block.
+ */
+export function heading4(options) {
+    return block.heading_4.createBlock(options);
 }
 
 /**
@@ -1936,6 +2092,17 @@ export function pdf(options) {
  */
 export function quote(options) {
     return block.quote.createBlock(options);
+}
+
+/**
+ * Creates a tab block.
+ * @memberof BlockShorthand
+ * @param {Array<Object>} options - An array of child blocks. Each child block must be a paragraph block. The paragraph block's rich text will set the tab's title, and its optional icon property will set the tab's icon.
+ * @see block.tab for full documentation
+ * @returns {Object} A tab block.
+ */
+export function tab(options) {
+    return block.tab.createBlock(options);
 }
 
 /**

@@ -205,7 +205,7 @@ export function quickPages({ parent, parent_type, pages, schema, childrenFn }) {
  * - `blockId(block_id)` - Adds block ID for block operations
  * - `propertyId(property_id)` - Adds property ID for property operations
  * - `cover(url)` - Sets page cover image
- * - `icon(url)` - Sets page icon
+ * - `icon(value)` - Sets page icon
  * - `position(positionChoice)` - Sets position within parent page (only valid when parent is a page)
  * 
  * **Property Methods:**
@@ -224,12 +224,14 @@ export function quickPages({ parent, parent_type, pages, schema, childrenFn }) {
  * - `select(name, value)` - Adds select property
  * - `status(name, value)` - Adds status property
  * - `url(name, value)` - Adds URL property
+ * - `verification(name, value)` - Adds a Verification property
  * 
  * **Block Methods:**
  * - `paragraph(content, options, url)` - Adds paragraph block
  * - `heading1(content, options, url)` - Adds H1 block
  * - `heading2(content, options, url)` - Adds H2 block
  * - `heading3(content, options, url)` - Adds H3 block
+ * - `heading4(content, options, url)` - Adds H4 block
  * - `bulletedListItem(content, options, url)` - Adds bulleted list item
  * - `numberedListItem(content, options, url)` - Adds numbered list item
  * - `toDo(content, checked, options, url)` - Adds to-do block
@@ -237,13 +239,14 @@ export function quickPages({ parent, parent_type, pages, schema, childrenFn }) {
  * - `quote(content, options, url)` - Adds quote block
  * - `code(content, language)` - Adds code block
  * - `divider()` - Adds divider block
- * - `image(url, caption)` - Adds image block
- * - `video(url, caption)` - Adds video block
- * - `audio(url, caption)` - Adds audio block
- * - `file(url, caption)` - Adds file block
- * - `pdf(url, caption)` - Adds PDF block
- * - `bookmark(url, caption)` - Adds bookmark block
- * - `embed(url, caption)` - Adds embed block
+ * - `image(url)` - Adds image block
+ * - `video(url)` - Adds video block
+ * - `audio(url)` - Adds audio block
+ * - `file(url)` - Adds file block
+ * - `pdf(url)` - Adds PDF block
+ * - `bookmark(url)` - Adds bookmark block
+ * - `embed(url)` - Adds embed block
+ * - `tab(childBlocks)` - Adds a tab block
  * - `table(tableArray)` - Adds table block
  * - `tableRow(cellContents)` - Adds table row
  * - `columnList(columnArray)` - Adds column list
@@ -592,15 +595,15 @@ export function createNotionBuilder({
 
         /**
          * Sets the icon for the page.
-         * @param {string} url - The URL of the icon image or an emoji.
+         * @param {string|Object} value - An emoji character, a URL for an externally-hosted image file, a non-URL string representing a native Notion icon, or a fully-formed icon object.
          * @returns {this} The builder instance for method chaining.
          */
-        icon(url) {
-            if (url === undefined || url === null || url === "") {
+        icon(value) {
+            if (value === undefined || value === null || value === "") {
                 return this;
             }
 
-            data.icon = page_meta.icon.createMeta(url);
+            data.icon = page_meta.icon.createMeta(value);
             return this;
         },
 
@@ -612,6 +615,7 @@ export function createNotionBuilder({
          *     {
          *       type: "template_id",
          *       template_id: "your-template-id"
+         *       timezone: "America/New_York",
          *     }
          *   - A string value:
          *     - "none": Do not use a template.
@@ -620,7 +624,6 @@ export function createNotionBuilder({
          * @returns {this} The builder instance for method chaining.
          */
         template(templateChoice) {
-            // Default to "none" if call is malformed
             if (templateChoice === undefined || templateChoice === null || typeof templateChoice !== "string" && typeof templateChoice !== "object") {
                 console.warn("template() method called in builder without a valid template choice. Ignoring this method call.");
                 return this;
@@ -899,6 +902,20 @@ export function createNotionBuilder({
             }
         },
 
+        /**
+         * Sets a Verification property value for the page.
+         * @param {string} name - The name of the property.
+         * @param {string|Object} value - a valid verification object, or a string reading either "verified" or "unverified". Pass a valid verification object if you want to include a date of verification.
+         * @returns {this} The builder instance for method chaining.
+         */
+        verification(name, value) {
+            if (value === undefined || value === null) {
+                return this;
+            } else {
+                return this.property(name, "verification", value);
+            }
+        },
+
         // Block Methods
         /**
          * Starts a new parent block that can contain child blocks.
@@ -919,6 +936,7 @@ export function createNotionBuilder({
                 "column",
                 "divider",
                 "table",
+                "tab",
             ];
             
             if (
@@ -1024,6 +1042,7 @@ export function createNotionBuilder({
                 "divider",
                 "table",
                 "table_of_contents",
+                "tab",
             ];
 
             if (typeof options === "number") {
@@ -1255,6 +1274,26 @@ export function createNotionBuilder({
         },
 
         /**
+         * Adds a heading_4 block to the current stack.
+         * @returns {this} The builder instance for method chaining.
+         * @see block.heading_4.createBlock for full documentation
+         */
+        heading4(options) {
+            let value;
+
+            if (
+                typeof options === "string" &&
+                options.length > CONSTANTS.MAX_TEXT_LENGTH
+            ) {
+                value = enforceStringLength(options).filter(Boolean);
+            } else {
+                value = options;
+            }
+
+            return this.addBlock("heading_4", value);
+        },
+
+        /**
          * Adds a bulleted_list_item block to the current stack.
          * @returns {this} The builder instance for method chaining.
          * @see block.bulleted_list_item.createBlock for full documentation
@@ -1482,6 +1521,24 @@ export function createNotionBuilder({
          */
         embed(options) {
             return this.addBlock("embed", options);
+        },
+
+        /**
+         * Adds a tab block to the current stack, then increments the stack one level down, so further blocks are added as children of the tab block. Only paragraph() and endTab() may be chained directly to this method.
+         * @returns {this} The builder instance for method chaining.
+         * @see block.tab.createBlock for full documentation
+         */
+        tab(options) {
+            return this.startParent("tab", options);
+        },
+
+        /**
+         * Alias for endParent(). Provides an intuitive way to stop adding paragraph blocks to the current tab block, and goes one level up in the block stack.
+         *
+         * @returns {this} The builder instance for method chaining.
+         */
+        endTab() {
+            return this.endParent();
         },
 
         /**
